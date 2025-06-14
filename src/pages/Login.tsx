@@ -1,28 +1,51 @@
 
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Eye, EyeOff, Mail, Lock, Github } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { signIn, signInWithGitHub, user } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Login attempt:', { email, password });
-    // TODO: Implement actual login logic
+    setLoading(true);
+    
+    const { error } = await signIn(email, password);
+    
+    if (!error) {
+      navigate('/dashboard');
+    }
+    
+    setLoading(false);
+  };
+
+  const handleGitHubSignIn = async () => {
+    setLoading(true);
+    await signInWithGitHub();
+    setLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-notion-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo - Removed Z icon */}
         <div className="flex items-center justify-center mb-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-notion-gray-900 font-mono">Zylo Study</h1>
@@ -38,6 +61,25 @@ const Login = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              onClick={handleGitHubSignIn}
+              disabled={loading}
+            >
+              <Github className="w-4 h-4 mr-2" />
+              Continue with GitHub
+            </Button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <Separator className="w-full" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-notion-gray-500">Or continue with email</span>
+              </div>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -51,6 +93,7 @@ const Login = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10 notion-input"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -67,11 +110,13 @@ const Login = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10 pr-10 notion-input"
                     required
+                    disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-notion-gray-400 hover:text-notion-gray-600"
+                    disabled={loading}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -87,24 +132,14 @@ const Login = () => {
                 </Link>
               </div>
 
-              <Button type="submit" className="w-full bg-notion-gray-900 hover:bg-notion-gray-800">
-                Sign in
+              <Button 
+                type="submit" 
+                className="w-full bg-notion-gray-900 hover:bg-notion-gray-800"
+                disabled={loading}
+              >
+                {loading ? 'Signing in...' : 'Sign in'}
               </Button>
             </form>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <Separator className="w-full" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-notion-gray-500">Or continue with</span>
-              </div>
-            </div>
-
-            <Button variant="outline" className="w-full">
-              <Github className="w-4 h-4 mr-2" />
-              Continue with GitHub
-            </Button>
 
             <div className="text-center">
               <span className="text-sm text-notion-gray-600">

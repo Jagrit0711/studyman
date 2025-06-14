@@ -1,6 +1,6 @@
 
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,9 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff, Mail, Lock, User, Github } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -18,21 +20,49 @@ const Signup = () => {
     confirmPassword: '',
     agreeToTerms: false
   });
+  const { signUp, signInWithGitHub, user } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/onboarding');
+    }
+  }, [user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Signup attempt:', formData);
-    // TODO: Implement actual signup logic
+    
+    if (formData.password !== formData.confirmPassword) {
+      return; // Should show error
+    }
+
+    setLoading(true);
+    
+    const { error } = await signUp(formData.email, formData.password, {
+      full_name: formData.name
+    });
+    
+    if (!error) {
+      navigate('/onboarding');
+    }
+    
+    setLoading(false);
   };
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleGitHubSignUp = async () => {
+    setLoading(true);
+    await signInWithGitHub();
+    setLoading(false);
+  };
+
   return (
     <div className="min-h-screen bg-notion-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo - Removed Z icon */}
         <div className="flex items-center justify-center mb-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-notion-gray-900 font-mono">Zylo Study</h1>
@@ -48,6 +78,25 @@ const Signup = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              onClick={handleGitHubSignUp}
+              disabled={loading}
+            >
+              <Github className="w-4 h-4 mr-2" />
+              Continue with GitHub
+            </Button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <Separator className="w-full" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-notion-gray-500">Or create with email</span>
+              </div>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
@@ -61,6 +110,7 @@ const Signup = () => {
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     className="pl-10 notion-input"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -77,6 +127,7 @@ const Signup = () => {
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     className="pl-10 notion-input"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -93,11 +144,13 @@ const Signup = () => {
                     onChange={(e) => handleInputChange('password', e.target.value)}
                     className="pl-10 pr-10 notion-input"
                     required
+                    disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-notion-gray-400 hover:text-notion-gray-600"
+                    disabled={loading}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -116,6 +169,7 @@ const Signup = () => {
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                     className="pl-10 notion-input"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -125,6 +179,7 @@ const Signup = () => {
                   id="terms"
                   checked={formData.agreeToTerms}
                   onCheckedChange={(checked) => handleInputChange('agreeToTerms', checked)}
+                  disabled={loading}
                 />
                 <Label htmlFor="terms" className="text-sm leading-none">
                   I agree to the{' '}
@@ -141,25 +196,11 @@ const Signup = () => {
               <Button 
                 type="submit" 
                 className="w-full bg-notion-gray-900 hover:bg-notion-gray-800"
-                disabled={!formData.agreeToTerms}
+                disabled={!formData.agreeToTerms || loading}
               >
-                Create account
+                {loading ? 'Creating account...' : 'Create account'}
               </Button>
             </form>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <Separator className="w-full" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-notion-gray-500">Or continue with</span>
-              </div>
-            </div>
-
-            <Button variant="outline" className="w-full">
-              <Github className="w-4 h-4 mr-2" />
-              Continue with GitHub
-            </Button>
 
             <div className="text-center">
               <span className="text-sm text-notion-gray-600">
