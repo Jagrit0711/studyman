@@ -13,7 +13,7 @@ import { useSubjects } from '@/hooks/useSubjects';
 import { supabase } from '@/integrations/supabase/client';
 
 const OnboardingFlow = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { subjects, userSubjects, loading, addUserSubject, removeUserSubject } = useSubjects();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
@@ -23,14 +23,37 @@ const OnboardingFlow = () => {
     major: ''
   });
   const [completing, setCompleting] = useState(false);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const navigate = useNavigate();
 
-  // Redirect if not logged in
+  // Check if user has already completed onboarding
   useEffect(() => {
-    if (!loading && !user) {
-      navigate('/login');
-    }
-  }, [user, loading, navigate]);
+    const checkOnboardingStatus = async () => {
+      if (!authLoading && user) {
+        try {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('onboarding_completed')
+            .eq('id', user.id)
+            .maybeSingle();
+          
+          if (profile && profile.onboarding_completed) {
+            console.log('User has already completed onboarding, redirecting to dashboard');
+            navigate('/dashboard');
+            return;
+          }
+        } catch (error) {
+          console.error('Error checking onboarding status:', error);
+        }
+      } else if (!authLoading && !user) {
+        navigate('/login');
+        return;
+      }
+      setCheckingOnboarding(false);
+    };
+
+    checkOnboardingStatus();
+  }, [user, authLoading, navigate]);
 
   // Initialize selected subjects from user's existing subjects
   useEffect(() => {
@@ -109,7 +132,7 @@ const OnboardingFlow = () => {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading || checkingOnboarding) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">

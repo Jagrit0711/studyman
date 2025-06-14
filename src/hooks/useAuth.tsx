@@ -31,17 +31,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         setLoading(false);
 
-        // Handle user registration - redirect to onboarding
-        if (event === 'USER_UPDATED' && session?.user && !session.user.email_confirmed_at) {
-          console.log('User signed up, waiting for email confirmation');
-        }
-        else if (event === 'USER_UPDATED' && session?.user && session.user.email_confirmed_at) {
-          console.log('Email confirmed, redirecting to onboarding');
-          window.location.href = '/onboarding';
-        }
-        // Handle user sign in - check if they need onboarding
-        else if (event === 'SIGNED_IN' && session?.user) {
-          // Check if this is a new user by checking if they have completed onboarding
+        // Handle authentication events without immediate redirects
+        if (event === 'SIGNED_IN' && session?.user) {
+          console.log('User signed in, checking onboarding status...');
+          
+          // Use setTimeout to prevent immediate redirect conflicts
           setTimeout(async () => {
             try {
               const { data: profile, error } = await supabase
@@ -52,18 +46,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               
               console.log('Profile check result:', profile, error);
               
+              // Only redirect if we're not already on the target page
+              const currentPath = window.location.pathname;
+              
               if (error || !profile || !profile.onboarding_completed) {
-                console.log('User needs onboarding, redirecting');
-                window.location.href = '/onboarding';
+                if (currentPath !== '/onboarding') {
+                  console.log('User needs onboarding, redirecting');
+                  window.location.href = '/onboarding';
+                }
               } else {
-                console.log('User has completed onboarding, redirecting to dashboard');
-                window.location.href = '/dashboard';
+                if (currentPath !== '/dashboard') {
+                  console.log('User has completed onboarding, redirecting to dashboard');
+                  window.location.href = '/dashboard';
+                }
               }
             } catch (error) {
-              console.log('Error checking profile, redirecting to onboarding:', error);
-              window.location.href = '/onboarding';
+              console.log('Error checking profile:', error);
+              if (window.location.pathname !== '/onboarding') {
+                window.location.href = '/onboarding';
+              }
             }
-          }, 100);
+          }, 500); // Increased delay to prevent conflicts
         }
       }
     );
@@ -165,6 +168,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           description: error.message,
           variant: "destructive"
         });
+      } else {
+        // Redirect to home page after successful signout
+        window.location.href = '/';
       }
 
       return { error };

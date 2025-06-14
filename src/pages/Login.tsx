@@ -14,15 +14,15 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signInWithGitHub, user } = useAuth();
+  const { signIn, signInWithGitHub, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if already logged in
+  // Redirect if already logged in - but wait for auth to load
   useEffect(() => {
-    if (user) {
+    if (!authLoading && user) {
       navigate('/dashboard');
     }
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +31,8 @@ const Login = () => {
     const { error } = await signIn(email, password);
     
     if (!error) {
-      navigate('/dashboard');
+      // Don't manually navigate - let the auth state change handler do it
+      console.log('Login successful, waiting for auth state change...');
     }
     
     setLoading(false);
@@ -39,9 +40,21 @@ const Login = () => {
 
   const handleGitHubSignIn = async () => {
     setLoading(true);
-    await signInWithGitHub();
-    setLoading(false);
+    const { error } = await signInWithGitHub();
+    if (error) {
+      setLoading(false);
+    }
+    // Don't set loading to false on success - the redirect will happen
   };
+
+  // Show loading while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-notion-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-notion-gray-900"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-notion-gray-50 flex items-center justify-center p-4">
