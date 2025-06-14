@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -39,13 +38,15 @@ const Signup = () => {
 
     setLoading(true);
     
+    console.log('Signing up with email:', formData.email);
     const { error } = await signUp(formData.email, formData.password, {
       full_name: formData.name
     });
     
-    if (!error) {
-      navigate('/onboarding');
-    }
+    console.log('Signup result:', { error });
+    
+    // Note: We don't navigate here because the auth hook will handle redirection
+    // based on the auth state change event
     
     setLoading(false);
   };
@@ -56,6 +57,7 @@ const Signup = () => {
 
   const handleGitHubSignUp = async () => {
     setLoading(true);
+    console.log('Attempting GitHub signup');
     await signInWithGitHub();
     setLoading(false);
   };

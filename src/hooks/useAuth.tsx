@@ -36,20 +36,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.log('User signed up, redirecting to onboarding');
           window.location.href = '/onboarding';
         }
-        // Handle user sign in from GitHub - redirect to onboarding for new users
+        // Handle user sign in - check if they need onboarding
         else if (event === 'SIGNED_IN' && session?.user) {
-          // Check if this is a new user by checking if they have a profile
+          // Check if this is a new user by checking if they have completed onboarding
           setTimeout(async () => {
             try {
-              const { data: profile } = await supabase
-                .from('profiles' as any)
+              const { data: profile, error } = await supabase
+                .from('profiles')
                 .select('onboarding_completed')
                 .eq('id', session.user.id)
                 .single();
               
-              if (!profile?.onboarding_completed) {
-                console.log('New user or incomplete onboarding, redirecting to onboarding');
+              console.log('Profile check result:', profile, error);
+              
+              if (error || !profile || !profile.onboarding_completed) {
+                console.log('User needs onboarding, redirecting');
                 window.location.href = '/onboarding';
+              } else {
+                console.log('User has completed onboarding, redirecting to dashboard');
+                window.location.href = '/dashboard';
               }
             } catch (error) {
               console.log('Error checking profile, redirecting to onboarding:', error);
