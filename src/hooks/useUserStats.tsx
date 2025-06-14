@@ -28,6 +28,8 @@ export const useUserStats = () => {
     }
 
     try {
+      console.log('Fetching stats for user:', user.id);
+      
       const { data, error } = await supabase
         .from('user_stats')
         .select('*')
@@ -37,22 +39,25 @@ export const useUserStats = () => {
       if (error) throw error;
       
       if (!data) {
-        // Create initial stats record if none exists
+        console.log('No stats found, creating initial record with 0 values');
+        // Create initial stats record if none exists - start with 0 values
         const { data: newStats, error: insertError } = await supabase
           .from('user_stats')
           .insert({
             user_id: user.id,
-            study_hours: 127,
-            rooms_joined: 23,
-            sessions_led: 8,
-            achievements: 12
+            study_hours: 0,
+            rooms_joined: 0,
+            sessions_led: 0,
+            achievements: 0
           })
           .select()
           .single();
 
         if (insertError) throw insertError;
+        console.log('Created initial stats:', newStats);
         setStats(newStats);
       } else {
+        console.log('Found existing stats:', data);
         setStats(data);
       }
     } catch (error) {
@@ -71,6 +76,8 @@ export const useUserStats = () => {
     if (!user || !stats) return null;
 
     try {
+      console.log('Updating stats:', updates);
+      
       const { data, error } = await supabase
         .from('user_stats')
         .update({
@@ -83,6 +90,7 @@ export const useUserStats = () => {
 
       if (error) throw error;
       
+      console.log('Stats updated successfully:', data);
       setStats(data);
       return data;
     } catch (error) {

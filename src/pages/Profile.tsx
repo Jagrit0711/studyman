@@ -23,7 +23,7 @@ const Profile = () => {
   const { profileDetails, loading: profileLoading, saveProfileDetails } = useUserProfile();
   const { colleges, majors } = useCollegesAndMajors();
   const { activities, loading: activitiesLoading } = useUserActivities();
-  const { stats, loading: statsLoading } = useUserStats();
+  const { stats, loading: statsLoading, updateStats } = useUserStats();
   const { toast } = useToast();
   
   const [isEditing, setIsEditing] = useState(false);
@@ -53,28 +53,20 @@ const Profile = () => {
     }
   }, [user]);
 
-  // Load profile details when available
+  // Load profile details when available and reset form
   useEffect(() => {
-    if (profileDetails) {
-      setProfileData({
-        full_name: userProfile.full_name,
-        email: userProfile.email,
-        college: profileDetails.college || '',
-        major: profileDetails.major || '',
-        school_year: profileDetails.school_year || '',
-        enable_mom_mode: profileDetails.enable_mom_mode || false
-      });
-    } else if (user) {
-      setProfileData({
-        full_name: userProfile.full_name,
-        email: userProfile.email,
-        college: '',
-        major: '',
-        school_year: '',
-        enable_mom_mode: false
-      });
+    if (user) {
+      const baseData = {
+        full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+        email: user.email || '',
+        college: profileDetails?.college || '',
+        major: profileDetails?.major || '',
+        school_year: profileDetails?.school_year || '',
+        enable_mom_mode: profileDetails?.enable_mom_mode || false
+      };
+      setProfileData(baseData);
     }
-  }, [profileDetails, userProfile, user]);
+  }, [profileDetails, user]);
 
   // Display real stats or default to 0
   const statsDisplay = [
@@ -95,6 +87,8 @@ const Profile = () => {
 
   const handleSave = async () => {
     try {
+      console.log('Saving profile data:', profileData);
+      
       // Update user profile in auth.users metadata
       const { error: userError } = await supabase.auth.updateUser({
         data: {
@@ -120,6 +114,8 @@ const Profile = () => {
         full_name: profileData.full_name
       }));
 
+      console.log('Profile saved successfully');
+
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
@@ -132,40 +128,55 @@ const Profile = () => {
 
   const handleCancel = () => {
     // Reset form data to original values
-    if (profileDetails) {
-      setProfileData({
-        full_name: userProfile.full_name,
-        email: userProfile.email,
-        college: profileDetails.college || '',
-        major: profileDetails.major || '',
-        school_year: profileDetails.school_year || '',
-        enable_mom_mode: profileDetails.enable_mom_mode || false
-      });
-    }
+    const originalData = {
+      full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || '',
+      email: user?.email || '',
+      college: profileDetails?.college || '',
+      major: profileDetails?.major || '',
+      school_year: profileDetails?.school_year || '',
+      enable_mom_mode: profileDetails?.enable_mom_mode || false
+    };
+    setProfileData(originalData);
     setIsEditing(false);
   };
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
+      console.log('Starting avatar upload...');
 
       if (!event.target.files || event.target.files.length === 0) {
         throw new Error('You must select an image to upload.');
       }
 
       const file = event.target.files[0];
+      console.log('File selected:', file.name, file.size);
+      
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('File size must be less than 5MB');
+      }
+
       const fileExt = file.name.split('.').pop();
       const filePath = `${user?.id}-${Math.random()}.${fileExt}`;
 
+      console.log('Uploading to path:', filePath);
+
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          upsert: true
+        });
 
       if (uploadError) {
+        console.error('Upload error:', uploadError);
         throw uploadError;
       }
 
+      console.log('File uploaded successfully');
+
       const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      console.log('Public URL:', data.publicUrl);
 
       const { error: updateError } = await supabase.auth.updateUser({
         data: {
@@ -173,7 +184,10 @@ const Profile = () => {
         }
       });
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('User update error:', updateError);
+        throw updateError;
+      }
 
       setUserProfile(prev => ({
         ...prev,
@@ -185,11 +199,11 @@ const Profile = () => {
         description: "Profile photo updated successfully"
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading avatar:', error);
       toast({
         title: "Error",
-        description: "Failed to upload profile photo",
+        description: error.message || "Failed to upload profile photo",
         variant: "destructive"
       });
     } finally {
