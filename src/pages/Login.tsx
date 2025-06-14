@@ -162,6 +162,18 @@ const Login = () => {
                 </Link>
               </span>
             </div>
+
+            <div className="pt-4 border-t border-notion-gray-200">
+              <div className="flex justify-center space-x-4 text-xs text-notion-gray-500">
+                <Link to="/privacy-policy" className="hover:text-notion-gray-700 underline">
+                  Privacy Policy
+                </Link>
+                <span>•</span>
+                <Link to="/terms-conditions" className="hover:text-notion-gray-700 underline">
+                  Terms & Conditions
+                </Link>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

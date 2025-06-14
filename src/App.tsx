@@ -14,6 +14,8 @@ import Settings from "./pages/Settings";
 import CreateRoom from "./pages/CreateRoom";
 import NotFound from "./pages/NotFound";
 import OnboardingFlow from "./pages/OnboardingFlow";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsConditions from "./pages/TermsConditions";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +35,8 @@ const App = () => (
               <Route path="/settings" element={<Settings />} />
               <Route path="/create-room" element={<CreateRoom />} />
               <Route path="/onboarding" element={<OnboardingFlow />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/terms-conditions" element={<TermsConditions />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -1,10 +1,11 @@
 
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { Save, Shield, Clock } from 'lucide-react';
+import { Save, Shield, Clock, ExternalLink } from 'lucide-react';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useToast } from '@/hooks/use-toast';
@@ -129,6 +130,26 @@ const PrivacySettings = () => {
                 checked={formData.enable_mom_mode}
                 onCheckedChange={(checked) => handleChange('enable_mom_mode', checked)}
               />
+            </div>
+          </div>
+
+          <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4">Legal Information</h3>
+            <div className="flex flex-col space-y-2">
+              <Link 
+                to="/privacy-policy" 
+                className="inline-flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+              >
+                Privacy Policy
+                <ExternalLink className="w-3 h-3 ml-1" />
+              </Link>
+              <Link 
+                to="/terms-conditions" 
+                className="inline-flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+              >
+                Terms & Conditions
+                <ExternalLink className="w-3 h-3 ml-1" />
+              </Link>
             </div>
           </div>
         </CardContent>
