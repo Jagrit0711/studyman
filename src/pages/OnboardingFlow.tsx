@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -114,10 +113,7 @@ const OnboardingFlow = () => {
       const newSubject = await addNewSubject(newSubjectName.trim());
       
       if (newSubject) {
-        // Add to selected subjects
         setSelectedSubjects(prev => [...prev, newSubject.id]);
-        
-        // Reset form
         setNewSubjectName('');
         setShowAddNewSubject(false);
       }
@@ -243,10 +239,10 @@ const OnboardingFlow = () => {
 
   if (authLoading || loading || checkingOnboarding) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center transition-colors">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Setting up your experience...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black dark:border-white mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300 text-lg">Setting up your experience...</p>
         </div>
       </div>
     );
@@ -256,17 +252,17 @@ const OnboardingFlow = () => {
   const dropdownSubjects = getDropdownSubjects();
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center p-4 transition-colors">
       <div className="w-full max-w-4xl">
         {/* Welcome Header with Animation */}
         <div className="text-center mb-8 animate-fade-in">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-black rounded-full mb-4 animate-scale-in">
-            <GraduationCap className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-black dark:bg-white rounded-full mb-4 animate-scale-in">
+            <GraduationCap className="w-8 h-8 text-white dark:text-black" />
           </div>
-          <h1 className="text-4xl font-bold text-black mb-2">
+          <h1 className="text-4xl font-bold text-black dark:text-white mb-2">
             Welcome to Zylo Study! 🎉
           </h1>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-600 dark:text-gray-300 text-lg">
             Let's personalize your learning journey in just a few steps
           </p>
         </div>
@@ -282,8 +278,8 @@ const OnboardingFlow = () => {
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
                     currentStep >= step
-                      ? 'bg-black text-white scale-110'
-                      : 'bg-gray-200 text-gray-600'
+                      ? 'bg-black dark:bg-white text-white dark:text-black scale-110'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                   }`}
                 >
                   {step}
@@ -291,27 +287,27 @@ const OnboardingFlow = () => {
                 {step < totalSteps && (
                   <div
                     className={`w-16 h-1 transition-all duration-300 ${
-                      currentStep > step ? 'bg-black' : 'bg-gray-200'
+                      currentStep > step ? 'bg-black dark:bg-white' : 'bg-gray-200 dark:bg-gray-700'
                     }`}
                   />
                 )}
               </div>
             ))}
           </div>
-          <div className="text-center text-sm text-gray-500">
+          <div className="text-center text-sm text-gray-500 dark:text-gray-400">
             Step {currentStep} of {totalSteps}
           </div>
         </div>
 
-        <Card className="shadow-xl border-2 border-gray-200 animate-slide-in-right">
+        <Card className="shadow-xl border-2 border-gray-200 dark:border-gray-700 animate-slide-in-right bg-white dark:bg-gray-800">
           <CardHeader className="text-center pb-4">
             {currentStep === 1 && (
               <>
                 <div className="flex items-center justify-center mb-4">
-                  <BookOpen className="w-8 h-8 text-black" />
+                  <BookOpen className="w-8 h-8 text-black dark:text-white" />
                 </div>
-                <CardTitle className="text-2xl text-black">Choose Your Study Subjects</CardTitle>
-                <CardDescription className="text-gray-600">
+                <CardTitle className="text-2xl text-black dark:text-white">Choose Your Study Subjects</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-300">
                   Select the subjects you're passionate about studying
                 </CardDescription>
               </>
@@ -319,10 +315,10 @@ const OnboardingFlow = () => {
             {currentStep === 2 && (
               <>
                 <div className="flex items-center justify-center mb-4">
-                  <GraduationCap className="w-8 h-8 text-black" />
+                  <GraduationCap className="w-8 h-8 text-black dark:text-white" />
                 </div>
-                <CardTitle className="text-2xl text-black">Tell Us About Your Studies</CardTitle>
-                <CardDescription className="text-gray-600">
+                <CardTitle className="text-2xl text-black dark:text-white">Tell Us About Your Studies</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-300">
                   Help us customize your experience based on your academic background
                 </CardDescription>
               </>
@@ -330,10 +326,10 @@ const OnboardingFlow = () => {
             {currentStep === 3 && (
               <>
                 <div className="flex items-center justify-center mb-4">
-                  <Heart className="w-8 h-8 text-black" />
+                  <Heart className="w-8 h-8 text-black dark:text-white" />
                 </div>
-                <CardTitle className="text-2xl text-black">Special Features</CardTitle>
-                <CardDescription className="text-gray-600">
+                <CardTitle className="text-2xl text-black dark:text-white">Special Features</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-300">
                   Configure additional features to enhance your learning experience
                 </CardDescription>
               </>
@@ -341,10 +337,10 @@ const OnboardingFlow = () => {
             {currentStep === 4 && (
               <>
                 <div className="flex items-center justify-center mb-4">
-                  <Calendar className="w-8 h-8 text-black" />
+                  <Calendar className="w-8 h-8 text-black dark:text-white" />
                 </div>
-                <CardTitle className="text-2xl text-black">You're All Set!</CardTitle>
-                <CardDescription className="text-gray-600">
+                <CardTitle className="text-2xl text-black dark:text-white">You're All Set!</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-300">
                   Review your information and start your learning journey
                 </CardDescription>
               </>
@@ -363,8 +359,8 @@ const OnboardingFlow = () => {
                         key={subject.id}
                         className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg ${
                           isSelected
-                            ? 'border-black bg-gray-50 shadow-md'
-                            : 'border-gray-200 hover:border-gray-400'
+                            ? 'border-black dark:border-white bg-gray-50 dark:bg-gray-700 shadow-md'
+                            : 'border-gray-200 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
                         }`}
                         onClick={() => toggleSubject(subject.id)}
                       >
@@ -374,16 +370,16 @@ const OnboardingFlow = () => {
                               {subject.icon && (
                                 <span className="text-2xl">{subject.icon}</span>
                               )}
-                              <h3 className="font-semibold text-black">
+                              <h3 className="font-semibold text-black dark:text-white">
                                 {subject.name}
                               </h3>
                             </div>
                           </div>
                           <div className="ml-2">
                             {isSelected ? (
-                              <CheckCircle className="w-6 h-6 text-black animate-scale-in" />
+                              <CheckCircle className="w-6 h-6 text-black dark:text-white animate-scale-in" />
                             ) : (
-                              <Circle className="w-6 h-6 text-gray-400" />
+                              <Circle className="w-6 h-6 text-gray-400 dark:text-gray-500" />
                             )}
                           </div>
                         </div>
@@ -394,22 +390,22 @@ const OnboardingFlow = () => {
                   {/* Browse More Subjects Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <div className="relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg border-gray-200 hover:border-gray-400">
+                      <div className="relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg border-gray-200 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-2">
                               <span className="text-2xl">🔍</span>
-                              <h3 className="font-semibold text-black">Browse More</h3>
+                              <h3 className="font-semibold text-black dark:text-white">Browse More</h3>
                             </div>
-                            <p className="text-sm text-gray-600">Find more subjects</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Find more subjects</p>
                           </div>
                           <div className="ml-2">
-                            <ChevronDown className="w-6 h-6 text-gray-400" />
+                            <ChevronDown className="w-6 h-6 text-gray-400 dark:text-gray-500" />
                           </div>
                         </div>
                       </div>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-80 max-h-80 overflow-y-auto bg-white border border-gray-300 shadow-lg">
+                    <DropdownMenuContent className="w-80 max-h-80 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 shadow-lg">
                       {dropdownSubjects.length > 0 ? (
                         <>
                           {dropdownSubjects.map((subject) => (
@@ -445,20 +441,20 @@ const OnboardingFlow = () => {
 
                 {/* Add New Subject Modal */}
                 {showAddNewSubject && (
-                  <div className="mb-6 p-6 bg-gray-50 rounded-xl animate-fade-in border border-gray-200">
-                    <h4 className="font-medium text-black mb-4">Add New Subject</h4>
+                  <div className="mb-6 p-6 bg-gray-50 dark:bg-gray-700 rounded-xl animate-fade-in border border-gray-200 dark:border-gray-600">
+                    <h4 className="font-medium text-black dark:text-white mb-4">Add New Subject</h4>
                     <div className="flex space-x-2">
                       <Input
                         placeholder="Enter subject name (e.g., Photography, Cooking, Web Development...)"
                         value={newSubjectName}
                         onChange={(e) => setNewSubjectName(e.target.value)}
-                        className="flex-1 border-gray-300 focus:border-black"
+                        className="flex-1 border-gray-300 dark:border-gray-600 focus:border-black dark:focus:border-white bg-white dark:bg-gray-800 text-black dark:text-white"
                         onKeyPress={(e) => e.key === 'Enter' && handleAddNewSubject()}
                       />
                       <Button 
                         onClick={handleAddNewSubject} 
                         disabled={!newSubjectName.trim() || addingSubject}
-                        className="bg-black hover:bg-gray-800 text-white"
+                        className="bg-black dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-black"
                         size="sm"
                       >
                         {addingSubject ? 'Adding...' : 'Add'}
@@ -469,28 +465,28 @@ const OnboardingFlow = () => {
                           setShowAddNewSubject(false);
                           setNewSubjectName('');
                         }}
-                        className="border-gray-300 text-black hover:bg-gray-50"
+                        className="border-gray-300 dark:border-gray-600 text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
                         size="sm"
                       >
                         Cancel
                       </Button>
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                       This subject will be saved to the database and available for all future users.
                     </p>
                   </div>
                 )}
 
                 {selectedSubjects.length > 0 && (
-                  <div className="p-4 bg-gray-50 rounded-xl animate-fade-in">
-                    <h4 className="font-medium text-black mb-2">
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-xl animate-fade-in">
+                    <h4 className="font-medium text-black dark:text-white mb-2">
                       Selected Subjects ({selectedSubjects.length})
                     </h4>
                     <div className="flex flex-wrap gap-2">
                       {selectedSubjects.map((subjectId) => {
                         const subject = subjects.find(s => s.id === subjectId);
                         return subject ? (
-                          <Badge key={subjectId} variant="secondary" className="bg-white border border-gray-300 text-black animate-scale-in">
+                          <Badge key={subjectId} variant="secondary" className="bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 text-black dark:text-white animate-scale-in">
                             {subject.icon} {subject.name}
                           </Badge>
                         ) : null;
@@ -625,8 +621,8 @@ const OnboardingFlow = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
-                        <Heart className="w-6 h-6 text-black" />
-                        <h3 className="text-lg font-semibold text-black">Mom Mode 💝</h3>
+                        <Heart className="w-6 h-6 text-black dark:text-white" />
+                        <h3 className="text-lg font-semibold text-black dark:text-white">Mom Mode 💝</h3>
                       </div>
                       <p className="text-gray-700 text-sm mb-4">
                         Enable gentle reminders and encouraging messages to help you stay motivated 
@@ -658,23 +654,23 @@ const OnboardingFlow = () => {
             {currentStep === 4 && (
               <div className="space-y-6 animate-fade-in">
                 <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 rounded-full mb-4 animate-scale-in">
-                    <CheckCircle className="w-10 h-10 text-black" />
+                  <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full mb-4 animate-scale-in">
+                    <CheckCircle className="w-10 h-10 text-black dark:text-white" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-4 text-black">Ready to Start Learning!</h3>
-                  <p className="text-gray-600 mb-6">
+                  <h3 className="text-xl font-semibold mb-4 text-black dark:text-white">Ready to Start Learning!</h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-6">
                     We've set up your personalized study environment. You can always update these preferences later.
                   </p>
                 </div>
 
                 <div className="bg-gray-50 rounded-xl p-6 space-y-4">
                   <div>
-                    <h4 className="font-medium text-black mb-2">Selected Subjects</h4>
+                    <h4 className="font-medium text-black dark:text-white mb-2">Selected Subjects</h4>
                     <div className="flex flex-wrap gap-2">
                       {selectedSubjects.map((subjectId) => {
                         const subject = subjects.find(s => s.id === subjectId);
                         return subject ? (
-                          <Badge key={subjectId} variant="secondary" className="bg-white border border-gray-300 text-black">
+                          <Badge key={subjectId} variant="secondary" className="bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 text-black dark:text-white">
                             {subject.icon} {subject.name}
                           </Badge>
                         ) : null;
@@ -684,7 +680,7 @@ const OnboardingFlow = () => {
                   
                   {(userDetails.college || userDetails.major || userDetails.schoolYear) && (
                     <div>
-                      <h4 className="font-medium text-black mb-2">Academic Info</h4>
+                      <h4 className="font-medium text-black dark:text-white mb-2">Academic Info</h4>
                       <div className="text-sm text-gray-600 space-y-1">
                         {userDetails.college && (
                           <p>Institution: {colleges.find(c => c.id === userDetails.college)?.name}</p>
@@ -699,10 +695,10 @@ const OnboardingFlow = () => {
 
                   {userDetails.enableMomMode && (
                     <div>
-                      <h4 className="font-medium text-black mb-2">Special Features</h4>
+                      <h4 className="font-medium text-black dark:text-white mb-2">Special Features</h4>
                       <div className="flex items-center space-x-2">
-                        <Heart className="w-4 h-4 text-black" />
-                        <span className="text-sm text-gray-600">Mom Mode Enabled 💝</span>
+                        <Heart className="w-4 h-4 text-black dark:text-white" />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Mom Mode Enabled 💝</span>
                       </div>
                     </div>
                   )}
@@ -716,7 +712,7 @@ const OnboardingFlow = () => {
                 variant="outline"
                 onClick={prevStep}
                 disabled={currentStep === 1}
-                className="transition-all duration-200 border-gray-300 text-black hover:bg-gray-50"
+                className="transition-all duration-200 border-gray-300 dark:border-gray-600 text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Previous
@@ -725,7 +721,7 @@ const OnboardingFlow = () => {
               {currentStep < totalSteps ? (
                 <Button
                   onClick={nextStep}
-                  className="bg-black hover:bg-gray-800 text-white transition-all duration-200"
+                  className="bg-black dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-black transition-all duration-200"
                 >
                   Next
                   <ArrowRight className="w-4 h-4 ml-2" />
@@ -734,7 +730,7 @@ const OnboardingFlow = () => {
                 <Button
                   onClick={handleCompleteOnboarding}
                   disabled={completing}
-                  className="bg-black hover:bg-gray-800 text-white transition-all duration-200"
+                  className="bg-black dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-black transition-all duration-200"
                 >
                   {completing ? 'Setting up...' : 'Complete Setup'}
                   <ArrowRight className="w-4 h-4 ml-2" />
