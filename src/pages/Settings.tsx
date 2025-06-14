@@ -30,7 +30,7 @@ const Settings = () => {
             <CardContent className="p-8 text-center">
               <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">Notification Settings</h3>
-              <p className="text-gray-600">Notification preferences will be available soon</p>
+              <p className="text-gray-600">Notification preferences are available in Account Settings</p>
             </CardContent>
           </Card>
         );
@@ -40,7 +40,7 @@ const Settings = () => {
             <CardContent className="p-8 text-center">
               <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">Privacy & Security</h3>
-              <p className="text-gray-600">Privacy and security settings will be available soon</p>
+              <p className="text-gray-600">Privacy and security settings are available in Account Settings</p>
             </CardContent>
           </Card>
         );
@@ -50,7 +50,7 @@ const Settings = () => {
             <CardContent className="p-8 text-center">
               <Palette className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">Appearance Settings</h3>
-              <p className="text-gray-600">Theme and appearance options will be available soon</p>
+              <p className="text-gray-600">Theme and appearance options are available in Account Settings</p>
             </CardContent>
           </Card>
         );
