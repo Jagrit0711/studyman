@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { CheckCircle, Circle, ArrowRight, ArrowLeft, GraduationCap, BookOpen, Calendar, Plus, Heart } from 'lucide-react';
+import { CheckCircle, Circle, ArrowRight, ArrowLeft, GraduationCap, BookOpen, Calendar, Plus, Heart, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubjects } from '@/hooks/useSubjects';
 import { useCollegesAndMajors } from '@/hooks/useCollegesAndMajors';
@@ -16,13 +16,14 @@ import { supabase } from '@/integrations/supabase/client';
 
 const OnboardingFlow = () => {
   const { user, loading: authLoading } = useAuth();
-  const { subjects, userSubjects, loading, addUserSubject, removeUserSubject } = useSubjects();
+  const { subjects, userSubjects, loading, addUserSubject, removeUserSubject, refetch } = useSubjects();
   const { colleges, majors, addCollege, addMajor } = useCollegesAndMajors();
   const { saveProfileDetails } = useUserProfile();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [showOtherSubject, setShowOtherSubject] = useState(false);
   const [otherSubjectName, setOtherSubjectName] = useState('');
+  const [customSubjects, setCustomSubjects] = useState<string[]>([]);
   const [userDetails, setUserDetails] = useState({
     college: '',
     schoolYear: '',
@@ -97,6 +98,17 @@ const OnboardingFlow = () => {
     });
   };
 
+  const handleAddCustomSubject = () => {
+    if (otherSubjectName.trim()) {
+      setCustomSubjects(prev => [...prev, otherSubjectName.trim()]);
+      setOtherSubjectName('');
+    }
+  };
+
+  const removeCustomSubject = (subjectToRemove: string) => {
+    setCustomSubjects(prev => prev.filter(subject => subject !== subjectToRemove));
+  };
+
   const handleAddOtherSubject = async () => {
     if (otherSubjectName.trim()) {
       try {
@@ -113,7 +125,7 @@ const OnboardingFlow = () => {
         setShowOtherSubject(false);
         
         // Refresh subjects list
-        window.location.reload();
+        refetch();
       } catch (error) {
         console.error('Error adding other subject:', error);
       }
@@ -365,7 +377,7 @@ const OnboardingFlow = () => {
                           <span className="text-2xl">➕</span>
                           <h3 className="font-semibold text-black">Other</h3>
                         </div>
-                        <p className="text-sm text-gray-600">Add a custom subject</p>
+                        <p className="text-sm text-gray-600">Add custom subjects</p>
                       </div>
                       <div className="ml-2">
                         {showOtherSubject ? (
@@ -380,33 +392,94 @@ const OnboardingFlow = () => {
 
                 {/* Custom Subject Input */}
                 {showOtherSubject && (
-                  <div className="mb-6 p-4 bg-gray-50 rounded-xl animate-fade-in">
-                    <Label htmlFor="other-subject" className="text-black mb-2 block">Enter Subject Name</Label>
-                    <div className="flex space-x-2">
-                      <Input
-                        id="other-subject"
-                        placeholder="e.g., Photography, Cooking, etc."
-                        value={otherSubjectName}
-                        onChange={(e) => setOtherSubjectName(e.target.value)}
-                        className="flex-1 border-gray-300 focus:border-black"
-                      />
-                      <Button 
-                        onClick={handleAddOtherSubject} 
-                        className="bg-black hover:bg-gray-800 text-white"
-                        size="sm"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
+                  <div className="mb-6 p-6 bg-gray-50 rounded-xl animate-fade-in">
+                    <div className="mb-4">
+                      <Label htmlFor="other-subject" className="text-black mb-2 block font-medium">Add Custom Subject</Label>
+                      <div className="flex space-x-2">
+                        <Input
+                          id="other-subject"
+                          placeholder="e.g., Photography, Cooking, Web Development..."
+                          value={otherSubjectName}
+                          onChange={(e) => setOtherSubjectName(e.target.value)}
+                          className="flex-1 border-gray-300 focus:border-black"
+                          onKeyPress={(e) => e.key === 'Enter' && handleAddCustomSubject()}
+                        />
+                        <Button 
+                          onClick={handleAddCustomSubject} 
+                          disabled={!otherSubjectName.trim()}
+                          className="bg-black hover:bg-gray-800 text-white"
+                          size="sm"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Custom Subjects List */}
+                    {customSubjects.length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-black mb-3">Your Custom Subjects</h4>
+                        <div className="space-y-2">
+                          {customSubjects.map((subject, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <span className="text-xl">📚</span>
+                                <span className="font-medium text-black">{subject}</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Button
+                                  onClick={async () => {
+                                    try {
+                                      const { data, error } = await supabase
+                                        .from('subjects')
+                                        .insert({ name: subject, icon: '📚' })
+                                        .select()
+                                        .single();
+
+                                      if (error) throw error;
+                                      
+                                      setSelectedSubjects(prev => [...prev, data.id]);
+                                      removeCustomSubject(subject);
+                                      refetch();
+                                    } catch (error) {
+                                      console.error('Error adding subject:', error);
+                                    }
+                                  }}
+                                  className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1"
+                                  size="sm"
+                                >
+                                  Add
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => removeCustomSubject(subject)}
+                                  className="border-gray-300 text-gray-600 hover:bg-gray-50 text-xs px-2 py-1"
+                                  size="sm"
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-4 pt-3 border-t border-gray-200">
                       <Button 
                         variant="outline" 
                         onClick={() => {
                           setShowOtherSubject(false);
                           setOtherSubjectName('');
+                          setCustomSubjects([]);
                         }} 
                         className="border-gray-300 text-black hover:bg-gray-50"
                         size="sm"
                       >
-                        Cancel
+                        Done Adding Subjects
                       </Button>
                     </div>
                   </div>
