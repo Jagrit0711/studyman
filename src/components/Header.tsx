@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Plus, Bell, User, Video, Users, MessageSquare, LogOut } from 'lucide-react';
+import { Search, Plus, Bell, User, Video, Users, MessageSquare, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import {
   DropdownMenu,
@@ -21,6 +21,7 @@ const Header = () => {
     { id: 'dashboard', label: 'Dashboard', icon: Users, path: '/dashboard' },
     { id: 'rooms', label: 'Study Rooms', icon: Video, path: '/dashboard' },
     { id: 'feed', label: 'Feed', icon: MessageSquare, path: '/dashboard' },
+    { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
   ];
 
   const handleSignOut = async () => {
@@ -94,9 +95,9 @@ const Header = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => navigate('/profile')}>
-                      <User className="w-4 h-4 mr-2" />
-                      Profile
+                    <DropdownMenuItem onClick={() => navigate('/settings')}>
+                      <Settings className="w-4 h-4 mr-2" />
+                      Settings
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleSignOut}>
                       <LogOut className="w-4 h-4 mr-2" />

@@ -9,7 +9,7 @@ import Landing from "./pages/Landing";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 import CreateRoom from "./pages/CreateRoom";
 import NotFound from "./pages/NotFound";
 import OnboardingFlow from "./pages/OnboardingFlow";
@@ -28,7 +28,7 @@ const App = () => (
             <Route path="/dashboard" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/create-room" element={<CreateRoom />} />
             <Route path="/onboarding" element={<OnboardingFlow />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
