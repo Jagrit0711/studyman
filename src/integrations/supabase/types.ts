@@ -102,6 +102,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_activities: {
+        Row: {
+          activity_type: string
+          created_at: string
+          description: string | null
+          id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_profile_details: {
         Row: {
           college: string | null
@@ -130,6 +157,78 @@ export type Database = {
           id?: string
           major?: string | null
           school_year?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          email_notifications: boolean | null
+          id: string
+          language: string | null
+          notifications: boolean | null
+          privacy_mode: boolean | null
+          theme: string | null
+          timezone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_notifications?: boolean | null
+          id?: string
+          language?: string | null
+          notifications?: boolean | null
+          privacy_mode?: boolean | null
+          theme?: string | null
+          timezone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_notifications?: boolean | null
+          id?: string
+          language?: string | null
+          notifications?: boolean | null
+          privacy_mode?: boolean | null
+          theme?: string | null
+          timezone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_stats: {
+        Row: {
+          achievements: number | null
+          created_at: string
+          id: string
+          rooms_joined: number | null
+          sessions_led: number | null
+          study_hours: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          achievements?: number | null
+          created_at?: string
+          id?: string
+          rooms_joined?: number | null
+          sessions_led?: number | null
+          study_hours?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          achievements?: number | null
+          created_at?: string
+          id?: string
+          rooms_joined?: number | null
+          sessions_led?: number | null
+          study_hours?: number | null
           updated_at?: string
           user_id?: string
         }

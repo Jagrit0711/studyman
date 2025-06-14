@@ -8,12 +8,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Edit, Camera, BookOpen, Users, Clock, Trophy, Settings } from 'lucide-react';
 import Header from '@/components/Header';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useCollegesAndMajors } from '@/hooks/useCollegesAndMajors';
+import { useUserActivities } from '@/hooks/useUserActivities';
+import { useUserStats } from '@/hooks/useUserStats';
+import { useUserSettings } from '@/hooks/useUserSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -21,6 +23,9 @@ const Profile = () => {
   const { user } = useAuth();
   const { profileDetails, loading: profileLoading, saveProfileDetails } = useUserProfile();
   const { colleges, majors } = useCollegesAndMajors();
+  const { activities, loading: activitiesLoading } = useUserActivities();
+  const { stats, loading: statsLoading } = useUserStats();
+  const { settings, loading: settingsLoading, updateSettings } = useUserSettings();
   const { toast } = useToast();
   
   const [isEditing, setIsEditing] = useState(false);
@@ -72,18 +77,11 @@ const Profile = () => {
     }
   }, [profileDetails, userProfile, user]);
 
-  const stats = [
-    { label: 'Study Hours', value: '127', icon: Clock, color: 'text-blue-600' },
-    { label: 'Rooms Joined', value: '23', icon: Users, color: 'text-green-600' },
-    { label: 'Sessions Led', value: '8', icon: BookOpen, color: 'text-purple-600' },
-    { label: 'Achievements', value: '12', icon: Trophy, color: 'text-yellow-600' },
-  ];
-
-  const recentActivity = [
-    { type: 'joined', title: 'Advanced Calculus Study Group', time: '2 hours ago' },
-    { type: 'created', title: 'Machine Learning Discussion', time: '1 day ago' },
-    { type: 'completed', title: 'Physics Problem Set Review', time: '2 days ago' },
-    { type: 'joined', title: 'Data Structures & Algorithms', time: '3 days ago' },
+  const statsDisplay = [
+    { label: 'Study Hours', value: stats?.study_hours?.toString() || '0', icon: Clock, color: 'text-blue-600' },
+    { label: 'Rooms Joined', value: stats?.rooms_joined?.toString() || '0', icon: Users, color: 'text-green-600' },
+    { label: 'Sessions Led', value: stats?.sessions_led?.toString() || '0', icon: BookOpen, color: 'text-purple-600' },
+    { label: 'Achievements', value: stats?.achievements?.toString() || '0', icon: Trophy, color: 'text-yellow-600' },
   ];
 
   const schoolYears = [
@@ -141,7 +139,33 @@ const Profile = () => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
-  if (profileLoading) {
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes} minutes ago`;
+    } else if (diffInMinutes < 1440) {
+      const hours = Math.floor(diffInMinutes / 60);
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+    } else {
+      const days = Math.floor(diffInMinutes / 1440);
+      return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+    }
+  };
+
+  const getActivityColor = (type: string) => {
+    switch (type) {
+      case 'joined': return 'bg-green-500';
+      case 'created': return 'bg-blue-500';
+      case 'completed': return 'bg-purple-500';
+      case 'achievement': return 'bg-yellow-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  if (profileLoading || statsLoading || settingsLoading) {
     return (
       <div className="min-h-screen bg-notion-gray-50">
         <Header />
@@ -215,7 +239,7 @@ const Profile = () => {
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            {stats.map((stat, index) => {
+            {statsDisplay.map((stat, index) => {
               const Icon = stat.icon;
               return (
                 <Card key={index} className="notion-card">
@@ -247,25 +271,34 @@ const Profile = () => {
                   <CardDescription>Your latest study sessions and interactions</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {recentActivity.map((activity, index) => (
-                      <div key={index} className="flex items-center space-x-3 p-3 rounded-lg bg-notion-gray-50">
-                        <div className={`w-2 h-2 rounded-full ${
-                          activity.type === 'joined' ? 'bg-green-500' :
-                          activity.type === 'created' ? 'bg-blue-500' :
-                          'bg-purple-500'
-                        }`} />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-notion-gray-900">
-                            {activity.type === 'joined' ? 'Joined' :
-                             activity.type === 'created' ? 'Created' :
-                             'Completed'} {activity.title}
-                          </p>
-                          <p className="text-xs text-notion-gray-500">{activity.time}</p>
+                  {activitiesLoading ? (
+                    <div className="space-y-3">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="animate-pulse h-16 bg-gray-200 rounded-lg"></div>
+                      ))}
+                    </div>
+                  ) : activities.length > 0 ? (
+                    <div className="space-y-4">
+                      {activities.map((activity) => (
+                        <div key={activity.id} className="flex items-center space-x-3 p-3 rounded-lg bg-notion-gray-50">
+                          <div className={`w-2 h-2 rounded-full ${getActivityColor(activity.activity_type)}`} />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-notion-gray-900">
+                              {activity.activity_type.charAt(0).toUpperCase() + activity.activity_type.slice(1)} {activity.title}
+                            </p>
+                            <p className="text-xs text-notion-gray-500">{getTimeAgo(activity.created_at)}</p>
+                            {activity.description && (
+                              <p className="text-xs text-notion-gray-600 mt-1">{activity.description}</p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-notion-gray-500">No recent activities</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
