@@ -1,19 +1,18 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent } from '@/components/ui/card';
 import { User, Settings as SettingsIcon, Bell, Shield, Palette } from 'lucide-react';
 import Header from '@/components/Header';
-import AccountSettings from '@/components/settings/AccountSettings';
-import ProfileOverview from '@/components/settings/ProfileOverview';
+import NewAccountSettings from '@/components/settings/NewAccountSettings';
+import NewProfileOverview from '@/components/settings/NewProfileOverview';
 
 const Settings = () => {
   const [activeSection, setActiveSection] = useState('profile');
 
   const sidebarItems = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'account', label: 'Account', icon: SettingsIcon },
+    { id: 'profile', label: 'Profile Overview', icon: User },
+    { id: 'account', label: 'Account Settings', icon: SettingsIcon },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'privacy', label: 'Privacy & Security', icon: Shield },
     { id: 'appearance', label: 'Appearance', icon: Palette },
@@ -22,76 +21,72 @@ const Settings = () => {
   const renderContent = () => {
     switch (activeSection) {
       case 'profile':
-        return <ProfileOverview />;
+        return <NewProfileOverview />;
       case 'account':
-        return <AccountSettings />;
+        return <NewAccountSettings />;
       case 'notifications':
         return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Settings</CardTitle>
-              <CardDescription>Manage your notification preferences</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-notion-gray-600">Notification settings coming soon...</p>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-8 text-center">
+              <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Notification Settings</h3>
+              <p className="text-gray-600">Notification preferences will be available soon</p>
             </CardContent>
           </Card>
         );
       case 'privacy':
         return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Privacy & Security</CardTitle>
-              <CardDescription>Manage your privacy and security settings</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-notion-gray-600">Privacy settings coming soon...</p>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-8 text-center">
+              <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Privacy & Security</h3>
+              <p className="text-gray-600">Privacy and security settings will be available soon</p>
             </CardContent>
           </Card>
         );
       case 'appearance':
         return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Appearance</CardTitle>
-              <CardDescription>Customize the look and feel</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-notion-gray-600">Appearance settings coming soon...</p>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-8 text-center">
+              <Palette className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Appearance Settings</h3>
+              <p className="text-gray-600">Theme and appearance options will be available soon</p>
             </CardContent>
           </Card>
         );
       default:
-        return <ProfileOverview />;
+        return <NewProfileOverview />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-notion-gray-50">
+    <div className="min-h-screen bg-gray-50">
       <Header />
-      <div className="container mx-auto px-4 py-6">
-        <div className="max-w-6xl mx-auto">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Page Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-notion-gray-900 font-mono">Settings</h1>
-            <p className="text-notion-gray-600 mt-2">Manage your account and preferences</p>
+            <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+            <p className="text-gray-600 mt-2">Manage your account preferences and profile information</p>
           </div>
 
           <div className="flex gap-8">
             {/* Sidebar */}
             <div className="w-64 shrink-0">
-              <Card className="notion-card">
+              <Card className="border-0 shadow-sm sticky top-8">
                 <CardContent className="p-4">
-                  <nav className="space-y-2">
+                  <nav className="space-y-1">
                     {sidebarItems.map((item) => {
                       const Icon = item.icon;
+                      const isActive = activeSection === item.id;
                       return (
                         <Button
                           key={item.id}
-                          variant={activeSection === item.id ? "secondary" : "ghost"}
-                          className={`w-full justify-start ${
-                            activeSection === item.id 
-                              ? 'bg-notion-gray-100 text-notion-gray-900' 
-                              : 'text-notion-gray-600 hover:bg-notion-gray-50'
+                          variant="ghost"
+                          className={`w-full justify-start h-11 px-3 ${
+                            isActive 
+                              ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium' 
+                              : 'text-gray-700 hover:bg-gray-50'
                           }`}
                           onClick={() => setActiveSection(item.id)}
                         >
@@ -106,7 +101,7 @@ const Settings = () => {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               {renderContent()}
             </div>
           </div>
