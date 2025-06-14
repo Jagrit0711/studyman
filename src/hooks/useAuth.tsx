@@ -30,6 +30,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // Handle user registration - redirect to onboarding
+        if (event === 'SIGNED_UP' && session?.user) {
+          console.log('User signed up, redirecting to onboarding');
+          window.location.href = '/onboarding';
+        }
+        // Handle user sign in from GitHub - redirect to onboarding for new users
+        else if (event === 'SIGNED_IN' && session?.user) {
+          // Check if this is a new user by checking if they have a profile
+          setTimeout(async () => {
+            try {
+              const { data: profile } = await supabase
+                .from('profiles' as any)
+                .select('onboarding_completed')
+                .eq('id', session.user.id)
+                .single();
+              
+              if (!profile?.onboarding_completed) {
+                console.log('New user or incomplete onboarding, redirecting to onboarding');
+                window.location.href = '/onboarding';
+              }
+            } catch (error) {
+              console.log('Error checking profile, redirecting to onboarding:', error);
+              window.location.href = '/onboarding';
+            }
+          }, 100);
+        }
       }
     );
 
@@ -49,7 +76,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}/onboarding`,
           data: metadata
         }
       });
@@ -63,7 +90,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         toast({
           title: "Success!",
-          description: "Please check your email to confirm your account."
+          description: "Please check your email to confirm your account, then you'll be redirected to complete your profile."
         });
       }
 
@@ -101,7 +128,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: `${window.location.origin}/onboarding`
         }
       });
 

@@ -28,7 +28,7 @@ export const useSubjects = () => {
   const fetchSubjects = async () => {
     try {
       const { data, error } = await supabase
-        .from('subjects')
+        .from('subjects' as any)
         .select('*')
         .order('name');
 
@@ -50,7 +50,7 @@ export const useSubjects = () => {
 
     try {
       const { data, error } = await supabase
-        .from('user_subjects')
+        .from('user_subjects' as any)
         .select(`
           id,
           subject_id,
@@ -83,11 +83,11 @@ export const useSubjects = () => {
 
     try {
       const { error } = await supabase
-        .from('user_subjects')
+        .from('user_subjects' as any)
         .insert({
           user_id: user.id,
           subject_id: subjectId
-        });
+        } as any);
 
       if (error) throw error;
       
@@ -113,7 +113,7 @@ export const useSubjects = () => {
 
     try {
       const { error } = await supabase
-        .from('user_subjects')
+        .from('user_subjects' as any)
         .delete()
         .eq('user_id', user.id)
         .eq('subject_id', subjectId);

@@ -7,12 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Circle, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubjects } from '@/hooks/useSubjects';
+import { supabase } from '@/integrations/supabase/client';
 
 const OnboardingFlow = () => {
   const { user } = useAuth();
   const { subjects, userSubjects, loading, addUserSubject, removeUserSubject } = useSubjects();
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-  const [step, setStep] = useState(1);
+  const [completing, setCompleting] = useState(false);
   const navigate = useNavigate();
 
   // Redirect if not logged in
@@ -39,30 +40,49 @@ const OnboardingFlow = () => {
     });
   };
 
-  const handleSaveSubjects = async () => {
-    // Remove subjects that are no longer selected
-    const toRemove = userSubjects
-      .filter(us => !selectedSubjects.includes(us.subject_id))
-      .map(us => us.subject_id);
+  const handleCompleteOnboarding = async () => {
+    setCompleting(true);
     
-    // Add new subjects
-    const toAdd = selectedSubjects.filter(
-      subjectId => !userSubjects.some(us => us.subject_id === subjectId)
-    );
+    try {
+      // Remove subjects that are no longer selected
+      const toRemove = userSubjects
+        .filter(us => !selectedSubjects.includes(us.subject_id))
+        .map(us => us.subject_id);
+      
+      // Add new subjects
+      const toAdd = selectedSubjects.filter(
+        subjectId => !userSubjects.some(us => us.subject_id === subjectId)
+      );
 
-    // Execute removals
-    for (const subjectId of toRemove) {
-      await removeUserSubject(subjectId);
-    }
+      // Execute removals
+      for (const subjectId of toRemove) {
+        await removeUserSubject(subjectId);
+      }
 
-    // Execute additions
-    for (const subjectId of toAdd) {
-      await addUserSubject(subjectId);
-    }
+      // Execute additions
+      for (const subjectId of toAdd) {
+        await addUserSubject(subjectId);
+      }
 
-    // Move to next step or dashboard
-    if (selectedSubjects.length > 0) {
+      // Mark onboarding as completed
+      if (user) {
+        await supabase
+          .from('profiles' as any)
+          .upsert({
+            id: user.id,
+            full_name: user.user_metadata?.full_name || user.email,
+            email: user.email,
+            avatar_url: user.user_metadata?.avatar_url,
+            onboarding_completed: true
+          } as any);
+      }
+
+      // Navigate to dashboard
       navigate('/dashboard');
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+    } finally {
+      setCompleting(false);
     }
   };
 
@@ -161,17 +181,18 @@ const OnboardingFlow = () => {
             <div className="flex justify-between items-center pt-6">
               <Button
                 variant="outline"
-                onClick={() => navigate('/dashboard')}
+                onClick={() => handleCompleteOnboarding()}
+                disabled={completing}
               >
                 Skip for now
               </Button>
               
               <Button
-                onClick={handleSaveSubjects}
-                disabled={selectedSubjects.length === 0}
+                onClick={handleCompleteOnboarding}
+                disabled={completing}
                 className="bg-notion-gray-900 hover:bg-notion-gray-800"
               >
-                Continue to Dashboard
+                {completing ? 'Setting up...' : 'Complete Setup'}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
