@@ -26,30 +26,48 @@ export const useGoogleCalendar = () => {
   useEffect(() => {
     const initializeGoogleCalendar = async () => {
       try {
+        console.log('Initializing Google Calendar...');
         await googleCalendarService.initialize();
-        setIsConnected(googleCalendarService.isSignedIn());
+        const connected = googleCalendarService.isSignedIn();
+        console.log('Google Calendar connection status:', connected);
+        setIsConnected(connected);
       } catch (error) {
         console.error('Failed to initialize Google Calendar:', error);
+        toast({
+          title: "Initialization Error",
+          description: "Failed to initialize Google Calendar service",
+          variant: "destructive"
+        });
       }
     };
 
     initializeGoogleCalendar();
-  }, []);
+  }, [toast]);
 
   const connectGoogleCalendar = async () => {
     setIsLoading(true);
     try {
+      console.log('Connecting to Google Calendar...');
       await googleCalendarService.requestAccessToken();
-      setIsConnected(true);
-      toast({
-        title: "Success",
-        description: "Google Calendar connected successfully"
-      });
+      
+      // Verify connection
+      const connected = googleCalendarService.isSignedIn();
+      console.log('Connection verification:', connected);
+      
+      if (connected) {
+        setIsConnected(true);
+        toast({
+          title: "Success",
+          description: "Google Calendar connected successfully"
+        });
+      } else {
+        throw new Error('Connection verification failed');
+      }
     } catch (error) {
       console.error('Failed to connect Google Calendar:', error);
       toast({
-        title: "Error",
-        description: "Failed to connect Google Calendar",
+        title: "Connection Error",
+        description: error instanceof Error ? error.message : "Failed to connect Google Calendar",
         variant: "destructive"
       });
     } finally {
@@ -58,27 +76,41 @@ export const useGoogleCalendar = () => {
   };
 
   const disconnectGoogleCalendar = () => {
-    googleCalendarService.signOut();
-    setIsConnected(false);
-    setEvents([]);
-    toast({
-      title: "Disconnected",
-      description: "Google Calendar disconnected"
-    });
+    try {
+      googleCalendarService.signOut();
+      setIsConnected(false);
+      setEvents([]);
+      toast({
+        title: "Disconnected",
+        description: "Google Calendar disconnected"
+      });
+    } catch (error) {
+      console.error('Failed to disconnect Google Calendar:', error);
+      toast({
+        title: "Error",
+        description: "Failed to disconnect Google Calendar",
+        variant: "destructive"
+      });
+    }
   };
 
   const fetchEvents = async (startDate: Date, endDate: Date) => {
-    if (!isConnected) return;
+    if (!isConnected) {
+      console.log('Not connected to Google Calendar, skipping fetch');
+      return;
+    }
 
     setIsLoading(true);
     try {
+      console.log('Fetching Google Calendar events...');
       const googleEvents = await googleCalendarService.getEvents(startDate, endDate);
+      console.log('Fetched events:', googleEvents);
       setEvents(googleEvents);
     } catch (error) {
       console.error('Failed to fetch Google Calendar events:', error);
       toast({
-        title: "Error",
-        description: "Failed to fetch Google Calendar events",
+        title: "Fetch Error",
+        description: error instanceof Error ? error.message : "Failed to fetch Google Calendar events",
         variant: "destructive"
       });
     } finally {
@@ -87,10 +119,15 @@ export const useGoogleCalendar = () => {
   };
 
   const createEvent = async (event: Omit<GoogleCalendarEvent, 'id'>) => {
-    if (!isConnected) return;
+    if (!isConnected) {
+      throw new Error('Not connected to Google Calendar');
+    }
 
     try {
+      console.log('Creating Google Calendar event:', event);
       const createdEvent = await googleCalendarService.createEvent(event);
+      console.log('Event created successfully:', createdEvent);
+      
       toast({
         title: "Success",
         description: "Event created in Google Calendar"
@@ -98,34 +135,45 @@ export const useGoogleCalendar = () => {
       return createdEvent;
     } catch (error) {
       console.error('Failed to create Google Calendar event:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to create event in Google Calendar";
       toast({
-        title: "Error",
-        description: "Failed to create event in Google Calendar",
+        title: "Creation Error",
+        description: errorMessage,
         variant: "destructive"
       });
+      throw error;
     }
   };
 
   const syncEventToGoogleCalendar = async (title: string, date: string, time: string, type: string) => {
-    if (!isConnected) return;
+    if (!isConnected) {
+      console.log('Not connected to Google Calendar, skipping sync');
+      return;
+    }
 
-    const startDateTime = new Date(`${date}T${time}`);
-    const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
+    try {
+      const startDateTime = new Date(`${date}T${time}`);
+      const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
 
-    const event: Omit<GoogleCalendarEvent, 'id'> = {
-      summary: title,
-      description: `Study event - ${type}`,
-      start: {
-        dateTime: startDateTime.toISOString(),
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      },
-      end: {
-        dateTime: endDateTime.toISOString(),
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      },
-    };
+      const event: Omit<GoogleCalendarEvent, 'id'> = {
+        summary: title,
+        description: `Study event - ${type}`,
+        start: {
+          dateTime: startDateTime.toISOString(),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+        end: {
+          dateTime: endDateTime.toISOString(),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+      };
 
-    return await createEvent(event);
+      console.log('Syncing event to Google Calendar:', event);
+      return await createEvent(event);
+    } catch (error) {
+      console.error('Failed to sync event to Google Calendar:', error);
+      throw error;
+    }
   };
 
   return {

@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, ExternalLink, Plus, Link, Unlink } from 'lucide-react';
+import { CalendarIcon, ExternalLink, Plus, Link, Unlink, RefreshCw } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,6 +20,7 @@ interface CalendarEvent {
   date: Date;
   time: string;
   type: 'study' | 'exam' | 'assignment' | 'meeting';
+  source?: 'local' | 'google';
 }
 
 interface NewEventForm {
@@ -51,10 +52,12 @@ const CalendarSection = () => {
     connectGoogleCalendar,
     disconnectGoogleCalendar,
     syncEventToGoogleCalendar,
+    fetchEvents: fetchGoogleEvents,
+    events: googleEvents,
   } = useGoogleCalendar();
 
   // Fetch calendar events from Supabase
-  const fetchEvents = async () => {
+  const fetchLocalEvents = async () => {
     if (!user) return;
 
     try {
@@ -65,7 +68,7 @@ const CalendarSection = () => {
         .order('date', { ascending: true });
 
       if (error) {
-        console.error('Error fetching events:', error);
+        console.error('Error fetching local events:', error);
         toast({
           title: "Error",
           description: "Failed to load your calendar events",
@@ -79,20 +82,71 @@ const CalendarSection = () => {
         title: event.title,
         date: new Date(event.date),
         time: event.time,
-        type: event.type as 'study' | 'exam' | 'assignment' | 'meeting'
+        type: event.type as 'study' | 'exam' | 'assignment' | 'meeting',
+        source: 'local'
       }));
 
-      setEvents(mappedEvents);
+      return mappedEvents;
     } catch (error) {
-      console.error('Error in fetchEvents:', error);
+      console.error('Error in fetchLocalEvents:', error);
+      return [];
+    }
+  };
+
+  // Fetch Google Calendar events
+  const fetchGoogleCalendarEvents = async () => {
+    if (!isGoogleCalendarConnected) return [];
+
+    try {
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - 1); // Fetch events from last month
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + 2); // Fetch events up to 2 months ahead
+
+      await fetchGoogleEvents(startDate, endDate);
+      
+      // Convert Google events to our format
+      const mappedGoogleEvents: CalendarEvent[] = googleEvents.map(event => ({
+        id: `google_${event.id}`,
+        title: event.summary,
+        date: new Date(event.start.dateTime),
+        time: new Date(event.start.dateTime).toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: false 
+        }),
+        type: 'meeting' as const, // Default type for Google events
+        source: 'google'
+      }));
+
+      return mappedGoogleEvents;
+    } catch (error) {
+      console.error('Error fetching Google Calendar events:', error);
+      return [];
+    }
+  };
+
+  // Combined fetch function
+  const fetchAllEvents = async () => {
+    setLoading(true);
+    try {
+      const [localEvents, googleEvents] = await Promise.all([
+        fetchLocalEvents(),
+        fetchGoogleCalendarEvents()
+      ]);
+
+      const allEvents = [...(localEvents || []), ...(googleEvents || [])];
+      setEvents(allEvents);
+    } catch (error) {
+      console.error('Error fetching all events:', error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchEvents();
-  }, [user]);
+    fetchAllEvents();
+  }, [user, isGoogleCalendarConnected, googleEvents]);
 
   const handleAddEvent = async () => {
     if (!newEvent.title.trim() || !newEvent.date || !newEvent.time || !user) return;
@@ -125,10 +179,9 @@ const CalendarSection = () => {
         title: data.title,
         date: new Date(data.date),
         time: data.time,
-        type: data.type as 'study' | 'exam' | 'assignment' | 'meeting'
+        type: data.type as 'study' | 'exam' | 'assignment' | 'meeting',
+        source: 'local'
       };
-
-      setEvents(prev => [...prev, newCalendarEvent]);
 
       // Sync to Google Calendar if requested and connected
       if (newEvent.syncToGoogle && isGoogleCalendarConnected) {
@@ -139,6 +192,7 @@ const CalendarSection = () => {
             newEvent.time,
             newEvent.type
           );
+          console.log('Event synced to Google Calendar successfully');
         } catch (error) {
           console.error('Failed to sync to Google Calendar:', error);
           toast({
@@ -148,6 +202,9 @@ const CalendarSection = () => {
           });
         }
       }
+
+      // Refresh events to include the new one
+      await fetchAllEvents();
 
       setNewEvent({ title: '', date: '', time: '', type: 'study', syncToGoogle: false });
       setIsAddDialogOpen(false);
@@ -159,6 +216,10 @@ const CalendarSection = () => {
     } catch (error) {
       console.error('Error in handleAddEvent:', error);
     }
+  };
+
+  const handleRefreshEvents = () => {
+    fetchAllEvents();
   };
 
   const getEventTypeColor = (type: string) => {
@@ -212,6 +273,16 @@ const CalendarSection = () => {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-lg font-semibold">Calendar</CardTitle>
           <div className="flex items-center space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefreshEvents}
+              disabled={loading}
+              className="text-sm"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
             {isGoogleCalendarConnected ? (
               <Button 
                 variant="outline" 
@@ -269,7 +340,9 @@ const CalendarSection = () => {
                     <div key={event.id} className="flex items-center justify-between p-3 border rounded-lg bg-background">
                       <div>
                         <p className="font-medium text-sm">{event.title}</p>
-                        <p className="text-xs text-muted-foreground">{event.time}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {event.time} {event.source === 'google' && '(Google Calendar)'}
+                        </p>
                       </div>
                       <Badge variant="secondary" className={getEventTypeColor(event.type)}>
                         {event.type}
@@ -382,7 +455,8 @@ const CalendarSection = () => {
                   <div>
                     <p className="font-medium text-sm">{event.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {event.date.toLocaleDateString()} at {event.time}
+                      {event.date.toLocaleDateString()} at {event.time} 
+                      {event.source === 'google' && ' (Google Calendar)'}
                     </p>
                   </div>
                 </div>
@@ -406,7 +480,7 @@ const CalendarSection = () => {
               </h4>
               <p className="text-sm text-muted-foreground mb-4">
                 {isGoogleCalendarConnected 
-                  ? 'Your events can now be synced with Google Calendar'
+                  ? 'Your events are now synced with Google Calendar'
                   : 'Connect your Google Calendar to sync study events automatically'
                 }
               </p>
