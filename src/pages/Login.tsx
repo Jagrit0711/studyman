@@ -22,12 +22,9 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-notion-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
+        {/* Logo - Removed Z icon */}
         <div className="flex items-center justify-center mb-8">
-          <div className="w-12 h-12 bg-gradient-to-br from-notion-gray-800 to-notion-gray-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-lg font-mono">Z</span>
-          </div>
-          <div className="ml-3">
+          <div className="text-center">
             <h1 className="text-2xl font-bold text-notion-gray-900 font-mono">Zylo Study</h1>
             <p className="text-sm text-notion-gray-500">by Zylon Labs</p>
           </div>

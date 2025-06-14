@@ -19,11 +19,8 @@ const Header = () => {
     <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-notion-gray-200">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
-          {/* Logo */}
+          {/* Logo - Removed Z icon */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-notion-gray-800 to-notion-gray-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm font-mono">Z</span>
-            </div>
             <div>
               <h1 className="text-xl font-semibold text-notion-gray-900 font-mono">Zylo Study</h1>
               <p className="text-xs text-notion-gray-500">by Zylon Labs</p>
