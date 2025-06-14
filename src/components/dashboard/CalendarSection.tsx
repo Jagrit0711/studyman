@@ -1,10 +1,17 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CalendarIcon, ExternalLink, Plus } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 interface CalendarEvent {
   id: string;
@@ -14,40 +21,115 @@ interface CalendarEvent {
   type: 'study' | 'exam' | 'assignment' | 'meeting';
 }
 
+interface NewEventForm {
+  title: string;
+  date: string;
+  time: string;
+  type: 'study' | 'exam' | 'assignment' | 'meeting';
+}
+
 const CalendarSection = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  
-  // Sample events
-  const [events] = useState<CalendarEvent[]>([
-    {
-      id: '1',
-      title: 'Calculus Exam',
-      date: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
-      time: '10:00 AM',
-      type: 'exam'
-    },
-    {
-      id: '2',
-      title: 'Study Group - Physics',
-      date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // Day after tomorrow
-      time: '2:00 PM',
-      type: 'study'
-    },
-    {
-      id: '3',
-      title: 'Chemistry Assignment Due',
-      date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
-      time: '11:59 PM',
-      type: 'assignment'
-    },
-    {
-      id: '4',
-      title: 'Professor Meeting',
-      date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days from now
-      time: '3:00 PM',
-      type: 'meeting'
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newEvent, setNewEvent] = useState<NewEventForm>({
+    title: '',
+    date: '',
+    time: '',
+    type: 'study'
+  });
+
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  // Fetch calendar events from Supabase
+  const fetchEvents = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching events:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load your calendar events",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const mappedEvents: CalendarEvent[] = data.map(event => ({
+        id: event.id,
+        title: event.title,
+        date: new Date(event.date),
+        time: event.time,
+        type: event.type as 'study' | 'exam' | 'assignment' | 'meeting'
+      }));
+
+      setEvents(mappedEvents);
+    } catch (error) {
+      console.error('Error in fetchEvents:', error);
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, [user]);
+
+  const handleAddEvent = async () => {
+    if (!newEvent.title.trim() || !newEvent.date || !newEvent.time || !user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .insert({
+          user_id: user.id,
+          title: newEvent.title,
+          date: newEvent.date,
+          time: newEvent.time,
+          type: newEvent.type
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding event:', error);
+        toast({
+          title: "Error",
+          description: "Failed to add event",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const newCalendarEvent: CalendarEvent = {
+        id: data.id,
+        title: data.title,
+        date: new Date(data.date),
+        time: data.time,
+        type: data.type as 'study' | 'exam' | 'assignment' | 'meeting'
+      };
+
+      setEvents(prev => [...prev, newCalendarEvent]);
+      setNewEvent({ title: '', date: '', time: '', type: 'study' });
+      setIsAddDialogOpen(false);
+
+      toast({
+        title: "Success",
+        description: "Event added successfully"
+      });
+    } catch (error) {
+      console.error('Error in handleAddEvent:', error);
+    }
+  };
 
   const getEventTypeColor = (type: string) => {
     switch (type) {
@@ -78,6 +160,20 @@ const CalendarSection = () => {
     .filter(event => event.date >= new Date())
     .sort((a, b) => a.date.getTime() - b.date.getTime())
     .slice(0, 4);
+
+  if (!user) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">
+              Please sign in to view your calendar.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -139,13 +235,77 @@ const CalendarSection = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-lg">Upcoming Events</CardTitle>
-          <Button size="sm" variant="outline">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Event
-          </Button>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Event
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Event</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="event-title">Title</Label>
+                  <Input
+                    id="event-title"
+                    value={newEvent.title}
+                    onChange={(e) => setNewEvent(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Enter event title"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="event-date">Date</Label>
+                  <Input
+                    id="event-date"
+                    type="date"
+                    value={newEvent.date}
+                    onChange={(e) => setNewEvent(prev => ({ ...prev, date: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="event-time">Time</Label>
+                  <Input
+                    id="event-time"
+                    type="time"
+                    value={newEvent.time}
+                    onChange={(e) => setNewEvent(prev => ({ ...prev, time: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="event-type">Type</Label>
+                  <Select value={newEvent.type} onValueChange={(value: 'study' | 'exam' | 'assignment' | 'meeting') => 
+                    setNewEvent(prev => ({ ...prev, type: value }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="study">Study</SelectItem>
+                      <SelectItem value="exam">Exam</SelectItem>
+                      <SelectItem value="assignment">Assignment</SelectItem>
+                      <SelectItem value="meeting">Meeting</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex space-x-2">
+                  <Button onClick={handleAddEvent} className="flex-1">
+                    Add Event
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1">
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </CardHeader>
         <CardContent className="space-y-3">
-          {upcomingEvents.length === 0 ? (
+          {loading ? (
+            <p className="text-muted-foreground text-sm">Loading events...</p>
+          ) : upcomingEvents.length === 0 ? (
             <p className="text-muted-foreground text-sm">No upcoming events</p>
           ) : (
             upcomingEvents.map(event => (

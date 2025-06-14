@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Video, Calendar as CalendarIcon } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import TodoItem from './TodoItem';
 
 export interface Todo {
@@ -28,36 +31,8 @@ interface NewTodoForm {
 }
 
 const UpcomingSection = () => {
-  const [todos, setTodos] = useState<Todo[]>([
-    {
-      id: '1',
-      title: 'Complete Calculus Assignment',
-      description: 'Finish problems 1-15 from chapter 8',
-      priority: 'high',
-      deadline: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
-      completed: false,
-      createdAt: new Date()
-    },
-    {
-      id: '2',
-      title: 'Review Biology Notes',
-      description: 'Go through cell division chapter',
-      priority: 'medium',
-      deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days
-      completed: false,
-      createdAt: new Date()
-    },
-    {
-      id: '3',
-      title: 'Prepare for Physics Lab',
-      description: 'Read lab manual and gather materials',
-      priority: 'low',
-      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week
-      completed: true,
-      createdAt: new Date()
-    }
-  ]);
-
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newTodo, setNewTodo] = useState<NewTodoForm>({
     title: '',
@@ -66,32 +41,162 @@ const UpcomingSection = () => {
     deadline: ''
   });
 
-  const handleAddTodo = () => {
-    if (!newTodo.title.trim()) return;
+  const { user } = useAuth();
+  const { toast } = useToast();
 
-    const todo: Todo = {
-      id: Date.now().toString(),
-      title: newTodo.title,
-      description: newTodo.description || undefined,
-      priority: newTodo.priority,
-      deadline: newTodo.deadline ? new Date(newTodo.deadline) : undefined,
-      completed: false,
-      createdAt: new Date()
-    };
+  // Fetch todos from Supabase
+  const fetchTodos = async () => {
+    if (!user) return;
 
-    setTodos(prev => [todo, ...prev]);
-    setNewTodo({ title: '', description: '', priority: 'medium', deadline: '' });
-    setIsAddDialogOpen(false);
+    try {
+      const { data, error } = await supabase
+        .from('todos')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching todos:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load your tasks",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const mappedTodos: Todo[] = data.map(todo => ({
+        id: todo.id,
+        title: todo.title,
+        description: todo.description || undefined,
+        priority: todo.priority as 'low' | 'medium' | 'high',
+        deadline: todo.deadline ? new Date(todo.deadline) : undefined,
+        completed: todo.completed,
+        createdAt: new Date(todo.created_at)
+      }));
+
+      setTodos(mappedTodos);
+    } catch (error) {
+      console.error('Error in fetchTodos:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleToggleTodo = (id: string) => {
-    setTodos(prev => prev.map(todo => 
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    ));
+  useEffect(() => {
+    fetchTodos();
+  }, [user]);
+
+  const handleAddTodo = async () => {
+    if (!newTodo.title.trim() || !user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('todos')
+        .insert({
+          user_id: user.id,
+          title: newTodo.title,
+          description: newTodo.description || null,
+          priority: newTodo.priority,
+          deadline: newTodo.deadline ? new Date(newTodo.deadline).toISOString() : null,
+          completed: false
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding todo:', error);
+        toast({
+          title: "Error",
+          description: "Failed to add task",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const newTodoItem: Todo = {
+        id: data.id,
+        title: data.title,
+        description: data.description || undefined,
+        priority: data.priority as 'low' | 'medium' | 'high',
+        deadline: data.deadline ? new Date(data.deadline) : undefined,
+        completed: data.completed,
+        createdAt: new Date(data.created_at)
+      };
+
+      setTodos(prev => [newTodoItem, ...prev]);
+      setNewTodo({ title: '', description: '', priority: 'medium', deadline: '' });
+      setIsAddDialogOpen(false);
+
+      toast({
+        title: "Success",
+        description: "Task added successfully"
+      });
+    } catch (error) {
+      console.error('Error in handleAddTodo:', error);
+    }
   };
 
-  const handleDeleteTodo = (id: string) => {
-    setTodos(prev => prev.filter(todo => todo.id !== id));
+  const handleToggleTodo = async (id: string) => {
+    if (!user) return;
+
+    const todo = todos.find(t => t.id === id);
+    if (!todo) return;
+
+    try {
+      const { error } = await supabase
+        .from('todos')
+        .update({ completed: !todo.completed })
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error toggling todo:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update task",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setTodos(prev => prev.map(todo => 
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo
+      ));
+    } catch (error) {
+      console.error('Error in handleToggleTodo:', error);
+    }
+  };
+
+  const handleDeleteTodo = async (id: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('todos')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error deleting todo:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete task",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setTodos(prev => prev.filter(todo => todo.id !== id));
+      
+      toast({
+        title: "Success",
+        description: "Task deleted successfully"
+      });
+    } catch (error) {
+      console.error('Error in handleDeleteTodo:', error);
+    }
   };
 
   const upcomingTodos = todos
@@ -109,6 +214,20 @@ const UpcomingSection = () => {
     });
 
   const completedTodos = todos.filter(todo => todo.completed);
+
+  if (!user) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">
+              Please sign in to view your tasks and calendar.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -201,7 +320,9 @@ const UpcomingSection = () => {
           </Dialog>
         </CardHeader>
         <CardContent className="space-y-3">
-          {upcomingTodos.length === 0 ? (
+          {loading ? (
+            <p className="text-muted-foreground text-sm">Loading tasks...</p>
+          ) : upcomingTodos.length === 0 ? (
             <p className="text-muted-foreground text-sm">No upcoming tasks</p>
           ) : (
             upcomingTodos.map(todo => (
