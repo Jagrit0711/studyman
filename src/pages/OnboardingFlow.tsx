@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { CheckCircle, Circle, ArrowRight, ArrowLeft, GraduationCap, BookOpen, Calendar, Plus, Heart, X } from 'lucide-react';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator 
+} from '@/components/ui/dropdown-menu';
+import { CheckCircle, Circle, ArrowRight, ArrowLeft, GraduationCap, BookOpen, Calendar, Plus, Heart, X, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubjects } from '@/hooks/useSubjects';
 import { useCollegesAndMajors } from '@/hooks/useCollegesAndMajors';
@@ -21,9 +29,9 @@ const OnboardingFlow = () => {
   const { saveProfileDetails } = useUserProfile();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-  const [showOtherSubject, setShowOtherSubject] = useState(false);
-  const [otherSubjectName, setOtherSubjectName] = useState('');
-  const [customSubjects, setCustomSubjects] = useState<string[]>([]);
+  const [showAddNewSubject, setShowAddNewSubject] = useState(false);
+  const [newSubjectName, setNewSubjectName] = useState('');
+  const [addingSubject, setAddingSubject] = useState(false);
   const [userDetails, setUserDetails] = useState({
     college: '',
     schoolYear: '',
@@ -98,38 +106,42 @@ const OnboardingFlow = () => {
     });
   };
 
-  const handleAddCustomSubject = () => {
-    if (otherSubjectName.trim()) {
-      setCustomSubjects(prev => [...prev, otherSubjectName.trim()]);
-      setOtherSubjectName('');
+  const handleAddNewSubject = async () => {
+    if (!newSubjectName.trim()) return;
+    
+    setAddingSubject(true);
+    try {
+      const { data, error } = await supabase
+        .from('subjects')
+        .insert({ 
+          name: newSubjectName.trim(), 
+          icon: '📚',
+          color: '#6B7280'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      // Add to selected subjects
+      setSelectedSubjects(prev => [...prev, data.id]);
+      
+      // Reset form
+      setNewSubjectName('');
+      setShowAddNewSubject(false);
+      
+      // Refresh subjects list
+      refetch();
+    } catch (error) {
+      console.error('Error adding new subject:', error);
+    } finally {
+      setAddingSubject(false);
     }
   };
 
-  const removeCustomSubject = (subjectToRemove: string) => {
-    setCustomSubjects(prev => prev.filter(subject => subject !== subjectToRemove));
-  };
-
-  const handleAddOtherSubject = async () => {
-    if (otherSubjectName.trim()) {
-      try {
-        const { data, error } = await supabase
-          .from('subjects')
-          .insert({ name: otherSubjectName.trim(), icon: '📚' })
-          .select()
-          .single();
-
-        if (error) throw error;
-        
-        setSelectedSubjects(prev => [...prev, data.id]);
-        setOtherSubjectName('');
-        setShowOtherSubject(false);
-        
-        // Refresh subjects list
-        refetch();
-      } catch (error) {
-        console.error('Error adding other subject:', error);
-      }
-    }
+  // Get subjects that are not already selected
+  const getAvailableSubjects = () => {
+    return subjects.filter(subject => !selectedSubjects.includes(subject.id));
   };
 
   const handleAddCustomCollege = async () => {
@@ -362,126 +374,93 @@ const OnboardingFlow = () => {
                     );
                   })}
                   
-                  {/* Other Option */}
-                  <div
-                    className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg ${
-                      showOtherSubject
-                        ? 'border-black bg-gray-50 shadow-md'
-                        : 'border-gray-200 hover:border-gray-400'
-                    }`}
-                    onClick={() => setShowOtherSubject(!showOtherSubject)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <span className="text-2xl">➕</span>
-                          <h3 className="font-semibold text-black">Other</h3>
+                  {/* Add More Subjects Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <div className="relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg border-gray-200 hover:border-gray-400">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <span className="text-2xl">➕</span>
+                              <h3 className="font-semibold text-black">Add More</h3>
+                            </div>
+                            <p className="text-sm text-gray-600">Browse all subjects</p>
+                          </div>
+                          <div className="ml-2">
+                            <ChevronDown className="w-6 h-6 text-gray-400" />
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-600">Add custom subjects</p>
                       </div>
-                      <div className="ml-2">
-                        {showOtherSubject ? (
-                          <CheckCircle className="w-6 h-6 text-black animate-scale-in" />
-                        ) : (
-                          <Circle className="w-6 h-6 text-gray-400" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-80 max-h-80 overflow-y-auto bg-white border border-gray-300 shadow-lg">
+                      {getAvailableSubjects().length > 0 ? (
+                        <>
+                          {getAvailableSubjects().map((subject) => (
+                            <DropdownMenuItem
+                              key={subject.id}
+                              onClick={() => toggleSubject(subject.id)}
+                              className="flex items-center space-x-3 p-3 hover:bg-gray-50 cursor-pointer"
+                            >
+                              <span className="text-lg">{subject.icon || '📚'}</span>
+                              <span className="text-black font-medium">{subject.name}</span>
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                        </>
+                      ) : (
+                        <>
+                          <div className="p-3 text-sm text-gray-500 text-center">
+                            All subjects are already selected!
+                          </div>
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
+                      <DropdownMenuItem
+                        onClick={() => setShowAddNewSubject(true)}
+                        className="flex items-center space-x-3 p-3 hover:bg-gray-50 cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4 text-black" />
+                        <span className="text-black font-medium">Add New Subject</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
-                {/* Custom Subject Input */}
-                {showOtherSubject && (
-                  <div className="mb-6 p-6 bg-gray-50 rounded-xl animate-fade-in">
-                    <div className="mb-4">
-                      <Label htmlFor="other-subject" className="text-black mb-2 block font-medium">Add Custom Subject</Label>
-                      <div className="flex space-x-2">
-                        <Input
-                          id="other-subject"
-                          placeholder="e.g., Photography, Cooking, Web Development..."
-                          value={otherSubjectName}
-                          onChange={(e) => setOtherSubjectName(e.target.value)}
-                          className="flex-1 border-gray-300 focus:border-black"
-                          onKeyPress={(e) => e.key === 'Enter' && handleAddCustomSubject()}
-                        />
-                        <Button 
-                          onClick={handleAddCustomSubject} 
-                          disabled={!otherSubjectName.trim()}
-                          className="bg-black hover:bg-gray-800 text-white"
-                          size="sm"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Custom Subjects List */}
-                    {customSubjects.length > 0 && (
-                      <div>
-                        <h4 className="font-medium text-black mb-3">Your Custom Subjects</h4>
-                        <div className="space-y-2">
-                          {customSubjects.map((subject, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg"
-                            >
-                              <div className="flex items-center space-x-2">
-                                <span className="text-xl">📚</span>
-                                <span className="font-medium text-black">{subject}</span>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <Button
-                                  onClick={async () => {
-                                    try {
-                                      const { data, error } = await supabase
-                                        .from('subjects')
-                                        .insert({ name: subject, icon: '📚' })
-                                        .select()
-                                        .single();
-
-                                      if (error) throw error;
-                                      
-                                      setSelectedSubjects(prev => [...prev, data.id]);
-                                      removeCustomSubject(subject);
-                                      refetch();
-                                    } catch (error) {
-                                      console.error('Error adding subject:', error);
-                                    }
-                                  }}
-                                  className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1"
-                                  size="sm"
-                                >
-                                  Add
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  onClick={() => removeCustomSubject(subject)}
-                                  className="border-gray-300 text-gray-600 hover:bg-gray-50 text-xs px-2 py-1"
-                                  size="sm"
-                                >
-                                  <X className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="mt-4 pt-3 border-t border-gray-200">
+                {/* Add New Subject Modal */}
+                {showAddNewSubject && (
+                  <div className="mb-6 p-6 bg-gray-50 rounded-xl animate-fade-in border border-gray-200">
+                    <h4 className="font-medium text-black mb-4">Add New Subject</h4>
+                    <div className="flex space-x-2">
+                      <Input
+                        placeholder="Enter subject name (e.g., Photography, Cooking, Web Development...)"
+                        value={newSubjectName}
+                        onChange={(e) => setNewSubjectName(e.target.value)}
+                        className="flex-1 border-gray-300 focus:border-black"
+                        onKeyPress={(e) => e.key === 'Enter' && handleAddNewSubject()}
+                      />
+                      <Button 
+                        onClick={handleAddNewSubject} 
+                        disabled={!newSubjectName.trim() || addingSubject}
+                        className="bg-black hover:bg-gray-800 text-white"
+                        size="sm"
+                      >
+                        {addingSubject ? 'Adding...' : 'Add'}
+                      </Button>
                       <Button 
                         variant="outline" 
                         onClick={() => {
-                          setShowOtherSubject(false);
-                          setOtherSubjectName('');
-                          setCustomSubjects([]);
-                        }} 
+                          setShowAddNewSubject(false);
+                          setNewSubjectName('');
+                        }}
                         className="border-gray-300 text-black hover:bg-gray-50"
                         size="sm"
                       >
-                        Done Adding Subjects
+                        Cancel
                       </Button>
                     </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      This subject will be saved to the database and available for all future users.
+                    </p>
                   </div>
                 )}
 
