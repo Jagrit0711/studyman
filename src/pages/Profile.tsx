@@ -8,14 +8,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Edit, Camera, BookOpen, Users, Clock, Trophy, Settings } from 'lucide-react';
+import { Edit, Camera, BookOpen, Users, Clock, Trophy, Save, X } from 'lucide-react';
 import Header from '@/components/Header';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useCollegesAndMajors } from '@/hooks/useCollegesAndMajors';
 import { useUserActivities } from '@/hooks/useUserActivities';
 import { useUserStats } from '@/hooks/useUserStats';
-import { useUserSettings } from '@/hooks/useUserSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,7 +24,6 @@ const Profile = () => {
   const { colleges, majors } = useCollegesAndMajors();
   const { activities, loading: activitiesLoading } = useUserActivities();
   const { stats, loading: statsLoading } = useUserStats();
-  const { settings, loading: settingsLoading, updateSettings } = useUserSettings();
   const { toast } = useToast();
   
   const [isEditing, setIsEditing] = useState(false);
@@ -42,6 +40,7 @@ const Profile = () => {
     email: '',
     avatar_url: ''
   });
+  const [uploading, setUploading] = useState(false);
 
   // Load user data when available
   useEffect(() => {
@@ -77,6 +76,7 @@ const Profile = () => {
     }
   }, [profileDetails, userProfile, user]);
 
+  // Display real stats or default to 0
   const statsDisplay = [
     { label: 'Study Hours', value: stats?.study_hours?.toString() || '0', icon: Clock, color: 'text-blue-600' },
     { label: 'Rooms Joined', value: stats?.rooms_joined?.toString() || '0', icon: Users, color: 'text-green-600' },
@@ -130,6 +130,73 @@ const Profile = () => {
     }
   };
 
+  const handleCancel = () => {
+    // Reset form data to original values
+    if (profileDetails) {
+      setProfileData({
+        full_name: userProfile.full_name,
+        email: userProfile.email,
+        college: profileDetails.college || '',
+        major: profileDetails.major || '',
+        school_year: profileDetails.school_year || '',
+        enable_mom_mode: profileDetails.enable_mom_mode || false
+      });
+    }
+    setIsEditing(false);
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true);
+
+      if (!event.target.files || event.target.files.length === 0) {
+        throw new Error('You must select an image to upload.');
+      }
+
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user?.id}-${Math.random()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          avatar_url: data.publicUrl
+        }
+      });
+
+      if (updateError) throw updateError;
+
+      setUserProfile(prev => ({
+        ...prev,
+        avatar_url: data.publicUrl
+      }));
+
+      toast({
+        title: "Success",
+        description: "Profile photo updated successfully"
+      });
+
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload profile photo",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const getDisplayName = () => {
     return profileData.full_name || userProfile.full_name || user?.email?.split('@')[0] || 'User';
   };
@@ -165,7 +232,7 @@ const Profile = () => {
     }
   };
 
-  if (profileLoading || statsLoading || settingsLoading) {
+  if (profileLoading || statsLoading) {
     return (
       <div className="min-h-screen bg-notion-gray-50">
         <Header />
@@ -201,13 +268,25 @@ const Profile = () => {
                       {getInitials()}
                     </AvatarFallback>
                   </Avatar>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="absolute -bottom-2 -right-2 rounded-full w-8 h-8 p-0"
-                  >
-                    <Camera className="w-4 h-4" />
-                  </Button>
+                  <div className="absolute -bottom-2 -right-2">
+                    <input
+                      type="file"
+                      id="avatar-upload"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                      disabled={uploading}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-full w-8 h-8 p-0"
+                      onClick={() => document.getElementById('avatar-upload')?.click()}
+                      disabled={uploading}
+                    >
+                      <Camera className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 
                 <div className="flex-1">
@@ -215,14 +294,36 @@ const Profile = () => {
                     <h1 className="text-2xl font-bold text-notion-gray-900 font-mono">
                       {getDisplayName()}
                     </h1>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsEditing(!isEditing)}
-                      className="flex items-center space-x-2"
-                    >
-                      {isEditing ? <Settings className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
-                      <span>{isEditing ? 'Settings' : 'Edit Profile'}</span>
-                    </Button>
+                    {!isEditing ? (
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsEditing(true)}
+                        className="flex items-center space-x-2"
+                      >
+                        <Edit className="w-4 h-4" />
+                        <span>Edit Profile</span>
+                      </Button>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          size="sm"
+                          onClick={handleSave}
+                          className="flex items-center space-x-1"
+                        >
+                          <Save className="w-4 h-4" />
+                          <span>Save</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleCancel}
+                          className="flex items-center space-x-1"
+                        >
+                          <X className="w-4 h-4" />
+                          <span>Cancel</span>
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   
                   <p className="text-notion-gray-600 mb-3">{profileData.email}</p>
@@ -296,7 +397,7 @@ const Profile = () => {
                     </div>
                   ) : (
                     <div className="text-center py-8">
-                      <p className="text-notion-gray-500">No recent activities</p>
+                      <p className="text-notion-gray-500">No recent activities found. Start studying to see your activity here!</p>
                     </div>
                   )}
                 </CardContent>
@@ -331,14 +432,14 @@ const Profile = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="college">College/University</Label>
+                      <Label htmlFor="college">School/College</Label>
                       {isEditing ? (
                         <Select
                           value={profileData.college}
                           onValueChange={(value) => setProfileData(prev => ({ ...prev, college: value }))}
                         >
                           <SelectTrigger className="notion-input">
-                            <SelectValue placeholder="Select your college" />
+                            <SelectValue placeholder="Select your school/college" />
                           </SelectTrigger>
                           <SelectContent>
                             {colleges.map((college) => (
@@ -351,21 +452,21 @@ const Profile = () => {
                       ) : (
                         <Input
                           id="college"
-                          value={profileData.college}
+                          value={profileData.college || 'Not specified'}
                           disabled={true}
                           className="notion-input bg-gray-100"
                         />
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="major">Major</Label>
+                      <Label htmlFor="major">Major/Stream</Label>
                       {isEditing ? (
                         <Select
                           value={profileData.major}
                           onValueChange={(value) => setProfileData(prev => ({ ...prev, major: value }))}
                         >
                           <SelectTrigger className="notion-input">
-                            <SelectValue placeholder="Select your major" />
+                            <SelectValue placeholder="Select your major/stream" />
                           </SelectTrigger>
                           <SelectContent>
                             {majors.map((major) => (
@@ -378,14 +479,14 @@ const Profile = () => {
                       ) : (
                         <Input
                           id="major"
-                          value={profileData.major}
+                          value={profileData.major || 'Not specified'}
                           disabled={true}
                           className="notion-input bg-gray-100"
                         />
                       )}
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="school_year">School Year</Label>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="school_year">Year</Label>
                       {isEditing ? (
                         <Select
                           value={profileData.school_year}
@@ -405,24 +506,13 @@ const Profile = () => {
                       ) : (
                         <Input
                           id="school_year"
-                          value={profileData.school_year}
+                          value={profileData.school_year || 'Not specified'}
                           disabled={true}
                           className="notion-input bg-gray-100"
                         />
                       )}
                     </div>
                   </div>
-                  
-                  {isEditing && (
-                    <div className="flex space-x-2 pt-4">
-                      <Button onClick={handleSave} className="bg-notion-gray-900 hover:bg-notion-gray-800">
-                        Save Changes
-                      </Button>
-                      <Button variant="outline" onClick={() => setIsEditing(false)}>
-                        Cancel
-                      </Button>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             </TabsContent>

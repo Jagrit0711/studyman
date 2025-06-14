@@ -34,7 +34,13 @@ export const useUserActivities = () => {
         .limit(10);
 
       if (error) throw error;
-      setActivities(data || []);
+      
+      // Type the response properly and filter valid activity types
+      const validActivities = (data || []).filter((activity): activity is UserActivity => {
+        return ['joined', 'created', 'completed', 'achievement'].includes(activity.activity_type);
+      });
+      
+      setActivities(validActivities);
     } catch (error) {
       console.error('Error fetching activities:', error);
       toast({
@@ -66,8 +72,14 @@ export const useUserActivities = () => {
 
       if (error) throw error;
       
-      setActivities(prev => [data, ...prev.slice(0, 9)]);
-      return data;
+      // Type check the returned data
+      if (data && ['joined', 'created', 'completed', 'achievement'].includes(data.activity_type)) {
+        const typedActivity = data as UserActivity;
+        setActivities(prev => [typedActivity, ...prev.slice(0, 9)]);
+        return typedActivity;
+      }
+      
+      return null;
     } catch (error) {
       console.error('Error adding activity:', error);
       toast({

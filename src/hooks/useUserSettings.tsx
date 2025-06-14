@@ -55,9 +55,16 @@ export const useUserSettings = () => {
           .single();
 
         if (insertError) throw insertError;
-        setSettings(newSettings);
+        
+        // Type check the theme before setting
+        if (newSettings && ['light', 'dark', 'system'].includes(newSettings.theme)) {
+          setSettings(newSettings as UserSettings);
+        }
       } else {
-        setSettings(data);
+        // Type check the theme before setting
+        if (['light', 'dark', 'system'].includes(data.theme)) {
+          setSettings(data as UserSettings);
+        }
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -87,7 +94,10 @@ export const useUserSettings = () => {
 
       if (error) throw error;
       
-      setSettings(data);
+      // Type check before setting
+      if (data && ['light', 'dark', 'system'].includes(data.theme)) {
+        setSettings(data as UserSettings);
+      }
       
       toast({
         title: "Success",
