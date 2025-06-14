@@ -20,6 +20,13 @@ export interface Todo {
   createdAt: Date;
 }
 
+interface NewTodoForm {
+  title: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high';
+  deadline: string;
+}
+
 const UpcomingSection = () => {
   const [todos, setTodos] = useState<Todo[]>([
     {
@@ -52,10 +59,10 @@ const UpcomingSection = () => {
   ]);
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [newTodo, setNewTodo] = useState({
+  const [newTodo, setNewTodo] = useState<NewTodoForm>({
     title: '',
     description: '',
-    priority: 'medium' as const,
+    priority: 'medium',
     deadline: ''
   });
 
