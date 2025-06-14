@@ -58,7 +58,7 @@ const CalendarSection = () => {
 
   // Fetch calendar events from Supabase
   const fetchLocalEvents = async () => {
-    if (!user) return;
+    if (!user) return [];
 
     try {
       const { data, error } = await supabase
@@ -74,7 +74,7 @@ const CalendarSection = () => {
           description: "Failed to load your calendar events",
           variant: "destructive"
         });
-        return;
+        return [];
       }
 
       const mappedEvents: CalendarEvent[] = data.map(event => ({
@@ -103,10 +103,10 @@ const CalendarSection = () => {
       const endDate = new Date();
       endDate.setMonth(endDate.getMonth() + 2); // Fetch events up to 2 months ahead
 
-      await fetchGoogleEvents(startDate, endDate);
+      const googleEventsData = await fetchGoogleEvents(startDate, endDate);
       
       // Convert Google events to our format
-      const mappedGoogleEvents: CalendarEvent[] = googleEvents.map(event => ({
+      const mappedGoogleEvents: CalendarEvent[] = (googleEventsData || []).map(event => ({
         id: `google_${event.id}`,
         title: event.summary,
         date: new Date(event.start.dateTime),
@@ -136,6 +136,7 @@ const CalendarSection = () => {
       ]);
 
       const allEvents = [...(localEvents || []), ...(googleEvents || [])];
+      console.log('All events fetched:', allEvents);
       setEvents(allEvents);
     } catch (error) {
       console.error('Error fetching all events:', error);
@@ -146,7 +147,14 @@ const CalendarSection = () => {
 
   useEffect(() => {
     fetchAllEvents();
-  }, [user, isGoogleCalendarConnected, googleEvents]);
+  }, [user, isGoogleCalendarConnected]);
+
+  // Refetch when Google events change
+  useEffect(() => {
+    if (isGoogleCalendarConnected && googleEvents.length > 0) {
+      fetchAllEvents();
+    }
+  }, [googleEvents]);
 
   const handleAddEvent = async () => {
     if (!newEvent.title.trim() || !newEvent.date || !newEvent.time || !user) return;
@@ -173,15 +181,6 @@ const CalendarSection = () => {
         });
         return;
       }
-
-      const newCalendarEvent: CalendarEvent = {
-        id: data.id,
-        title: data.title,
-        date: new Date(data.date),
-        time: data.time,
-        type: data.type as 'study' | 'exam' | 'assignment' | 'meeting',
-        source: 'local'
-      };
 
       // Sync to Google Calendar if requested and connected
       if (newEvent.syncToGoogle && isGoogleCalendarConnected) {

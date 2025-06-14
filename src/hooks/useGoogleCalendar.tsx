@@ -97,7 +97,7 @@ export const useGoogleCalendar = () => {
   const fetchEvents = async (startDate: Date, endDate: Date) => {
     if (!isConnected) {
       console.log('Not connected to Google Calendar, skipping fetch');
-      return;
+      return [];
     }
 
     setIsLoading(true);
@@ -106,6 +106,7 @@ export const useGoogleCalendar = () => {
       const googleEvents = await googleCalendarService.getEvents(startDate, endDate);
       console.log('Fetched events:', googleEvents);
       setEvents(googleEvents);
+      return googleEvents;
     } catch (error) {
       console.error('Failed to fetch Google Calendar events:', error);
       toast({
@@ -113,6 +114,7 @@ export const useGoogleCalendar = () => {
         description: error instanceof Error ? error.message : "Failed to fetch Google Calendar events",
         variant: "destructive"
       });
+      return [];
     } finally {
       setIsLoading(false);
     }
@@ -127,6 +129,9 @@ export const useGoogleCalendar = () => {
       console.log('Creating Google Calendar event:', event);
       const createdEvent = await googleCalendarService.createEvent(event);
       console.log('Event created successfully:', createdEvent);
+      
+      // Update local events list
+      setEvents(prev => [...prev, createdEvent]);
       
       toast({
         title: "Success",
@@ -148,7 +153,7 @@ export const useGoogleCalendar = () => {
   const syncEventToGoogleCalendar = async (title: string, date: string, time: string, type: string) => {
     if (!isConnected) {
       console.log('Not connected to Google Calendar, skipping sync');
-      return;
+      return null;
     }
 
     try {

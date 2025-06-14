@@ -19,6 +19,7 @@ interface GoogleCalendarResponse {
 
 class GoogleCalendarService {
   private clientId = '240473196565-7fi2k9hvvts0466180fldca3rr9nikf3.apps.googleusercontent.com';
+  private apiKey = 'AIzaSyBQf5x2QZ3mP9vL8cE2nH4wR7tY6uI5oK9'; // Replace with your actual API key
   private discoveryDoc = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
   private scopes = 'https://www.googleapis.com/auth/calendar';
   
@@ -39,6 +40,7 @@ class GoogleCalendarService {
         this.gapi.load('client', async () => {
           try {
             await this.gapi.client.init({
+              apiKey: this.apiKey,
               discoveryDocs: [this.discoveryDoc],
             });
             resolve(true);
@@ -146,7 +148,7 @@ class GoogleCalendarService {
     }
   }
 
-  async createEvent(event: GoogleCalendarEvent): Promise<GoogleCalendarEvent> {
+  async createEvent(event: Omit<GoogleCalendarEvent, 'id'>): Promise<GoogleCalendarEvent> {
     if (!this.isSignedIn()) {
       throw new Error('Not signed in to Google Calendar');
     }
