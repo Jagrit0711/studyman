@@ -24,6 +24,7 @@ class GoogleCalendarService {
   private scopes = 'https://www.googleapis.com/auth/calendar';
   
   private gapi: any = null;
+  private google: any = null;
   private tokenClient: any = null;
   private isInitialized = false;
 
