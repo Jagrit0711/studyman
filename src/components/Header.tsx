@@ -1,16 +1,18 @@
 
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Plus, Bell, User, Video, Users, MessageSquare } from 'lucide-react';
 
 const Header = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const navigate = useNavigate();
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Users },
-    { id: 'rooms', label: 'Study Rooms', icon: Video },
-    { id: 'feed', label: 'Feed', icon: MessageSquare },
+    { id: 'dashboard', label: 'Dashboard', icon: Users, path: '/' },
+    { id: 'rooms', label: 'Study Rooms', icon: Video, path: '/' },
+    { id: 'feed', label: 'Feed', icon: MessageSquare, path: '/' },
   ];
 
   return (
@@ -18,23 +20,24 @@ const Header = () => {
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-gradient-to-br from-notion-gray-800 to-notion-gray-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">Z</span>
+              <span className="text-white font-bold text-sm font-mono">Z</span>
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-notion-gray-900">Zylo Study</h1>
+              <h1 className="text-xl font-semibold text-notion-gray-900 font-mono">Zylo Study</h1>
               <p className="text-xs text-notion-gray-500">by Zylon Labs</p>
             </div>
-          </div>
+          </Link>
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
-                <button
+                <Link
                   key={item.id}
+                  to={item.path}
                   onClick={() => setActiveTab(item.id)}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
                     activeTab === item.id
@@ -44,7 +47,7 @@ const Header = () => {
                 >
                   <Icon className="w-4 h-4" />
                   <span className="text-sm font-medium">{item.label}</span>
-                </button>
+                </Link>
               );
             })}
           </nav>
@@ -59,7 +62,12 @@ const Header = () => {
               />
             </div>
             
-            <Button variant="outline" size="sm" className="hidden sm:flex items-center space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="hidden sm:flex items-center space-x-2"
+              onClick={() => navigate('/create-room')}
+            >
               <Plus className="w-4 h-4" />
               <span>Create Room</span>
             </Button>
@@ -68,7 +76,11 @@ const Header = () => {
               <Bell className="w-4 h-4" />
             </Button>
             
-            <Button variant="ghost" size="sm">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => navigate('/profile')}
+            >
               <User className="w-4 h-4" />
             </Button>
           </div>
