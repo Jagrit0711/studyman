@@ -7,10 +7,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, ExternalLink, Plus } from 'lucide-react';
+import { CalendarIcon, ExternalLink, Plus, Link, Unlink } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 
 interface CalendarEvent {
   id: string;
@@ -25,6 +27,7 @@ interface NewEventForm {
   date: string;
   time: string;
   type: 'study' | 'exam' | 'assignment' | 'meeting';
+  syncToGoogle: boolean;
 }
 
 const CalendarSection = () => {
@@ -36,11 +39,19 @@ const CalendarSection = () => {
     title: '',
     date: '',
     time: '',
-    type: 'study'
+    type: 'study',
+    syncToGoogle: false
   });
 
   const { user } = useAuth();
   const { toast } = useToast();
+  const {
+    isConnected: isGoogleCalendarConnected,
+    isLoading: isGoogleCalendarLoading,
+    connectGoogleCalendar,
+    disconnectGoogleCalendar,
+    syncEventToGoogleCalendar,
+  } = useGoogleCalendar();
 
   // Fetch calendar events from Supabase
   const fetchEvents = async () => {
@@ -118,7 +129,27 @@ const CalendarSection = () => {
       };
 
       setEvents(prev => [...prev, newCalendarEvent]);
-      setNewEvent({ title: '', date: '', time: '', type: 'study' });
+
+      // Sync to Google Calendar if requested and connected
+      if (newEvent.syncToGoogle && isGoogleCalendarConnected) {
+        try {
+          await syncEventToGoogleCalendar(
+            newEvent.title,
+            newEvent.date,
+            newEvent.time,
+            newEvent.type
+          );
+        } catch (error) {
+          console.error('Failed to sync to Google Calendar:', error);
+          toast({
+            title: "Warning",
+            description: "Event created but failed to sync to Google Calendar",
+            variant: "destructive"
+          });
+        }
+      }
+
+      setNewEvent({ title: '', date: '', time: '', type: 'study', syncToGoogle: false });
       setIsAddDialogOpen(false);
 
       toast({
@@ -180,10 +211,30 @@ const CalendarSection = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-lg font-semibold">Calendar</CardTitle>
-          <Button variant="outline" size="sm" className="text-sm">
-            <ExternalLink className="w-4 h-4 mr-2" />
-            Connect Google Calendar
-          </Button>
+          <div className="flex items-center space-x-2">
+            {isGoogleCalendarConnected ? (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={disconnectGoogleCalendar}
+                className="text-sm"
+              >
+                <Unlink className="w-4 h-4 mr-2" />
+                Disconnect Google
+              </Button>
+            ) : (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={connectGoogleCalendar}
+                disabled={isGoogleCalendarLoading}
+                className="text-sm"
+              >
+                <Link className="w-4 h-4 mr-2" />
+                {isGoogleCalendarLoading ? 'Connecting...' : 'Connect Google Calendar'}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="border-t">
@@ -294,6 +345,18 @@ const CalendarSection = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                {isGoogleCalendarConnected && (
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="sync-google"
+                      checked={newEvent.syncToGoogle}
+                      onCheckedChange={(checked) => setNewEvent(prev => ({ ...prev, syncToGoogle: checked }))}
+                    />
+                    <Label htmlFor="sync-google" className="text-sm">
+                      Sync to Google Calendar
+                    </Label>
+                  </div>
+                )}
                 <div className="flex space-x-2 pt-4">
                   <Button onClick={handleAddEvent} className="flex-1">
                     Add Event
@@ -332,25 +395,39 @@ const CalendarSection = () => {
         </CardContent>
       </Card>
 
-      {/* Google Calendar Integration Notice */}
-      <Card className="border-dashed border-2">
+      {/* Google Calendar Integration Status */}
+      <Card className={isGoogleCalendarConnected ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950" : "border-dashed border-2"}>
         <CardContent className="pt-6">
           <div className="text-center space-y-3">
-            <CalendarIcon className="w-8 h-8 mx-auto text-muted-foreground" />
+            <CalendarIcon className={`w-8 h-8 mx-auto ${isGoogleCalendarConnected ? 'text-green-600' : 'text-muted-foreground'}`} />
             <div>
-              <h4 className="font-medium mb-1">Google Calendar Integration</h4>
+              <h4 className="font-medium mb-1">
+                {isGoogleCalendarConnected ? 'Google Calendar Connected' : 'Google Calendar Integration'}
+              </h4>
               <p className="text-sm text-muted-foreground mb-4">
-                Sync your study schedule with Google Calendar for better organization
+                {isGoogleCalendarConnected 
+                  ? 'Your events can now be synced with Google Calendar'
+                  : 'Connect your Google Calendar to sync study events automatically'
+                }
               </p>
             </div>
-            <div className="space-y-2">
-              <Button variant="outline" size="sm" disabled className="w-full">
-                Coming Soon - Two-way Sync
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Full Google Calendar integration with automatic sync is under development
-              </p>
-            </div>
+            {!isGoogleCalendarConnected && (
+              <div className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={connectGoogleCalendar}
+                  disabled={isGoogleCalendarLoading}
+                  className="w-full"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  {isGoogleCalendarLoading ? 'Connecting...' : 'Connect Google Calendar'}
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Secure OAuth 2.0 authentication with Google
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
