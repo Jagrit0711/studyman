@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,21 +6,31 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle, Circle, ArrowRight, ArrowLeft, GraduationCap, BookOpen, Calendar } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { CheckCircle, Circle, ArrowRight, ArrowLeft, GraduationCap, BookOpen, Calendar, Plus, Heart } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubjects } from '@/hooks/useSubjects';
+import { useCollegesAndMajors } from '@/hooks/useCollegesAndMajors';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/integrations/supabase/client';
 
 const OnboardingFlow = () => {
   const { user, loading: authLoading } = useAuth();
   const { subjects, userSubjects, loading, addUserSubject, removeUserSubject } = useSubjects();
+  const { colleges, majors, addCollege, addMajor } = useCollegesAndMajors();
+  const { saveProfileDetails } = useUserProfile();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [userDetails, setUserDetails] = useState({
     college: '',
     schoolYear: '',
-    major: ''
+    major: '',
+    enableMomMode: false
   });
+  const [customCollege, setCustomCollege] = useState('');
+  const [customMajor, setCustomMajor] = useState('');
+  const [showCustomCollege, setShowCustomCollege] = useState(false);
+  const [showCustomMajor, setShowCustomMajor] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const navigate = useNavigate();
@@ -62,7 +71,7 @@ const OnboardingFlow = () => {
     }
   }, [userSubjects]);
 
-  const totalSteps = 3;
+  const totalSteps = 4;
 
   const nextStep = () => {
     if (currentStep < totalSteps) {
@@ -84,6 +93,28 @@ const OnboardingFlow = () => {
         return [...prev, subjectId];
       }
     });
+  };
+
+  const handleAddCustomCollege = async () => {
+    if (customCollege.trim()) {
+      const newCollege = await addCollege(customCollege.trim());
+      if (newCollege) {
+        setUserDetails(prev => ({ ...prev, college: newCollege.id }));
+        setCustomCollege('');
+        setShowCustomCollege(false);
+      }
+    }
+  };
+
+  const handleAddCustomMajor = async () => {
+    if (customMajor.trim()) {
+      const newMajor = await addMajor(customMajor.trim());
+      if (newMajor) {
+        setUserDetails(prev => ({ ...prev, major: newMajor.id }));
+        setCustomMajor('');
+        setShowCustomMajor(false);
+      }
+    }
   };
 
   const handleCompleteOnboarding = async () => {
@@ -110,7 +141,22 @@ const OnboardingFlow = () => {
         await addUserSubject(subjectId);
       }
 
-      // Update profile with onboarding completion and user details
+      // Save user profile details
+      const collegeValue = userDetails.college ? 
+        colleges.find(c => c.id === userDetails.college)?.name || userDetails.college : 
+        '';
+      const majorValue = userDetails.major ? 
+        majors.find(m => m.id === userDetails.major)?.name || userDetails.major : 
+        '';
+
+      await saveProfileDetails({
+        college: collegeValue,
+        school_year: userDetails.schoolYear,
+        major: majorValue,
+        enable_mom_mode: userDetails.enableMomMode
+      });
+
+      // Update profile with onboarding completion
       if (user) {
         await supabase
           .from('profiles')
@@ -162,7 +208,7 @@ const OnboardingFlow = () => {
         {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex items-center justify-center space-x-4 mb-4">
-            {[1, 2, 3].map((step) => (
+            {[1, 2, 3, 4].map((step) => (
               <div
                 key={step}
                 className={`flex items-center ${step < totalSteps ? 'mr-4' : ''}`}
@@ -218,6 +264,17 @@ const OnboardingFlow = () => {
             {currentStep === 3 && (
               <>
                 <div className="flex items-center justify-center mb-4">
+                  <Heart className="w-8 h-8 text-indigo-600" />
+                </div>
+                <CardTitle className="text-2xl">Special Features</CardTitle>
+                <CardDescription>
+                  Configure additional features to enhance your learning experience
+                </CardDescription>
+              </>
+            )}
+            {currentStep === 4 && (
+              <>
+                <div className="flex items-center justify-center mb-4">
                   <Calendar className="w-8 h-8 text-indigo-600" />
                 </div>
                 <CardTitle className="text-2xl">You're All Set!</CardTitle>
@@ -231,6 +288,7 @@ const OnboardingFlow = () => {
             {/* Step 1: Subject Selection */}
             {currentStep === 1 && (
               <div className="animate-fade-in">
+                {/* ... keep existing code (subject selection grid) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                   {subjects.map((subject) => {
                     const isSelected = selectedSubjects.includes(subject.id);
@@ -295,23 +353,93 @@ const OnboardingFlow = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="college">College/University</Label>
-                    <Input
-                      id="college"
-                      placeholder="Enter your institution name"
-                      value={userDetails.college}
-                      onChange={(e) => setUserDetails(prev => ({ ...prev, college: e.target.value }))}
-                      className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500"
-                    />
+                    {!showCustomCollege ? (
+                      <div className="flex space-x-2">
+                        <Select onValueChange={(value) => {
+                          if (value === 'custom') {
+                            setShowCustomCollege(true);
+                          } else {
+                            setUserDetails(prev => ({ ...prev, college: value }));
+                          }
+                        }}>
+                          <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500">
+                            <SelectValue placeholder="Select your institution" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {colleges.map((college) => (
+                              <SelectItem key={college.id} value={college.id}>
+                                {college.name}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="custom">+ Add Custom Institution</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <div className="flex space-x-2">
+                        <Input
+                          placeholder="Enter institution name"
+                          value={customCollege}
+                          onChange={(e) => setCustomCollege(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button onClick={handleAddCustomCollege} size="sm">
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setShowCustomCollege(false)} 
+                          size="sm"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="major">Major/Field of Study</Label>
-                    <Input
-                      id="major"
-                      placeholder="e.g., Computer Science, Biology"
-                      value={userDetails.major}
-                      onChange={(e) => setUserDetails(prev => ({ ...prev, major: e.target.value }))}
-                      className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500"
-                    />
+                    {!showCustomMajor ? (
+                      <div className="flex space-x-2">
+                        <Select onValueChange={(value) => {
+                          if (value === 'custom') {
+                            setShowCustomMajor(true);
+                          } else {
+                            setUserDetails(prev => ({ ...prev, major: value }));
+                          }
+                        }}>
+                          <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-indigo-500">
+                            <SelectValue placeholder="Select your major" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {majors.map((major) => (
+                              <SelectItem key={major.id} value={major.id}>
+                                {major.name}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="custom">+ Add Custom Major</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <div className="flex space-x-2">
+                        <Input
+                          placeholder="Enter major/field of study"
+                          value={customMajor}
+                          onChange={(e) => setCustomMajor(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button onClick={handleAddCustomMajor} size="sm">
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setShowCustomMajor(false)} 
+                          size="sm"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -326,6 +454,7 @@ const OnboardingFlow = () => {
                       <SelectItem value="junior">Junior (3rd Year)</SelectItem>
                       <SelectItem value="senior">Senior (4th Year)</SelectItem>
                       <SelectItem value="graduate">Graduate Student</SelectItem>
+                      <SelectItem value="high-school">High School</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
@@ -333,8 +462,44 @@ const OnboardingFlow = () => {
               </div>
             )}
 
-            {/* Step 3: Review */}
+            {/* Step 3: Special Features */}
             {currentStep === 3 && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="bg-pink-50 border border-pink-200 rounded-xl p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <Heart className="w-6 h-6 text-pink-600" />
+                        <h3 className="text-lg font-semibold text-pink-900">Mom Mode 💝</h3>
+                      </div>
+                      <p className="text-pink-700 text-sm mb-4">
+                        Enable gentle reminders and encouraging messages to help you stay motivated 
+                        and maintain healthy study habits. Perfect for students who appreciate a caring, 
+                        nurturing approach to learning.
+                      </p>
+                      <div className="text-xs text-pink-600 space-y-1">
+                        <p>• Get gentle study reminders</p>
+                        <p>• Receive encouraging messages when you're struggling</p>
+                        <p>• Reminders to take breaks and stay hydrated</p>
+                        <p>• Celebration of your achievements, big and small</p>
+                      </div>
+                    </div>
+                    <div className="ml-4">
+                      <Switch
+                        checked={userDetails.enableMomMode}
+                        onCheckedChange={(checked) => 
+                          setUserDetails(prev => ({ ...prev, enableMomMode: checked }))
+                        }
+                        className="data-[state=checked]:bg-pink-600"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Review */}
+            {currentStep === 4 && (
               <div className="space-y-6 animate-fade-in">
                 <div className="text-center">
                   <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4 animate-scale-in">
@@ -365,9 +530,23 @@ const OnboardingFlow = () => {
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2">Academic Info</h4>
                       <div className="text-sm text-gray-600 space-y-1">
-                        {userDetails.college && <p>Institution: {userDetails.college}</p>}
-                        {userDetails.major && <p>Major: {userDetails.major}</p>}
+                        {userDetails.college && (
+                          <p>Institution: {colleges.find(c => c.id === userDetails.college)?.name}</p>
+                        )}
+                        {userDetails.major && (
+                          <p>Major: {majors.find(m => m.id === userDetails.major)?.name}</p>
+                        )}
                         {userDetails.schoolYear && <p>Year: {userDetails.schoolYear}</p>}
+                      </div>
+                    </div>
+                  )}
+
+                  {userDetails.enableMomMode && (
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-2">Special Features</h4>
+                      <div className="flex items-center space-x-2">
+                        <Heart className="w-4 h-4 text-pink-600" />
+                        <span className="text-sm text-gray-600">Mom Mode Enabled 💝</span>
                       </div>
                     </div>
                   )}

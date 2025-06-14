@@ -9,6 +9,45 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      colleges: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          type: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          type?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          type?: string | null
+        }
+        Relationships: []
+      }
+      majors: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -60,6 +99,39 @@ export type Database = {
           icon?: string | null
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      user_profile_details: {
+        Row: {
+          college: string | null
+          created_at: string
+          enable_mom_mode: boolean | null
+          id: string
+          major: string | null
+          school_year: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          college?: string | null
+          created_at?: string
+          enable_mom_mode?: boolean | null
+          id?: string
+          major?: string | null
+          school_year?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          college?: string | null
+          created_at?: string
+          enable_mom_mode?: boolean | null
+          id?: string
+          major?: string | null
+          school_year?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
