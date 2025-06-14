@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -179,34 +178,36 @@ const CalendarSection = () => {
     <div className="space-y-6">
       {/* Calendar */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-lg">Calendar</CardTitle>
-          <Button variant="outline" size="sm">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardTitle className="text-lg font-semibold">Calendar</CardTitle>
+          <Button variant="outline" size="sm" className="text-sm">
             <ExternalLink className="w-4 h-4 mr-2" />
             Connect Google Calendar
           </Button>
         </CardHeader>
-        <CardContent>
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={setSelectedDate}
-            className="rounded-md border"
-            modifiers={{
-              hasEvents: getDatesWithEvents()
-            }}
-            modifiersStyles={{
-              hasEvents: { 
-                backgroundColor: 'hsl(var(--primary))', 
-                color: 'hsl(var(--primary-foreground))',
-                fontWeight: 'bold'
-              }
-            }}
-          />
+        <CardContent className="p-0">
+          <div className="border-t">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={setSelectedDate}
+              className="w-full"
+              modifiers={{
+                hasEvents: getDatesWithEvents()
+              }}
+              modifiersStyles={{
+                hasEvents: { 
+                  backgroundColor: 'hsl(var(--primary))', 
+                  color: 'hsl(var(--primary-foreground))',
+                  fontWeight: 'bold'
+                }
+              }}
+            />
+          </div>
           
           {selectedDate && (
-            <div className="mt-4">
-              <h4 className="font-medium mb-2">
+            <div className="p-4 border-t bg-muted/20">
+              <h4 className="font-medium mb-3 text-sm">
                 Events for {selectedDate.toLocaleDateString()}
               </h4>
               {getEventsForDate(selectedDate).length === 0 ? (
@@ -214,7 +215,7 @@ const CalendarSection = () => {
               ) : (
                 <div className="space-y-2">
                   {getEventsForDate(selectedDate).map(event => (
-                    <div key={event.id} className="flex items-center justify-between p-2 border rounded">
+                    <div key={event.id} className="flex items-center justify-between p-3 border rounded-lg bg-background">
                       <div>
                         <p className="font-medium text-sm">{event.title}</p>
                         <p className="text-xs text-muted-foreground">{event.time}</p>
@@ -234,7 +235,7 @@ const CalendarSection = () => {
       {/* Upcoming Events */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-lg">Upcoming Events</CardTitle>
+          <CardTitle className="text-lg font-semibold">Upcoming Events</CardTitle>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" variant="outline">
@@ -242,11 +243,11 @@ const CalendarSection = () => {
                 Add Event
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>Add New Event</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
+              <div className="space-y-4 pt-4">
                 <div>
                   <Label htmlFor="event-title">Title</Label>
                   <Input
@@ -254,6 +255,7 @@ const CalendarSection = () => {
                     value={newEvent.title}
                     onChange={(e) => setNewEvent(prev => ({ ...prev, title: e.target.value }))}
                     placeholder="Enter event title"
+                    className="mt-1"
                   />
                 </div>
                 <div>
@@ -263,6 +265,7 @@ const CalendarSection = () => {
                     type="date"
                     value={newEvent.date}
                     onChange={(e) => setNewEvent(prev => ({ ...prev, date: e.target.value }))}
+                    className="mt-1"
                   />
                 </div>
                 <div>
@@ -272,6 +275,7 @@ const CalendarSection = () => {
                     type="time"
                     value={newEvent.time}
                     onChange={(e) => setNewEvent(prev => ({ ...prev, time: e.target.value }))}
+                    className="mt-1"
                   />
                 </div>
                 <div>
@@ -279,7 +283,7 @@ const CalendarSection = () => {
                   <Select value={newEvent.type} onValueChange={(value: 'study' | 'exam' | 'assignment' | 'meeting') => 
                     setNewEvent(prev => ({ ...prev, type: value }))
                   }>
-                    <SelectTrigger>
+                    <SelectTrigger className="mt-1">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -290,7 +294,7 @@ const CalendarSection = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex space-x-2 pt-4">
                   <Button onClick={handleAddEvent} className="flex-1">
                     Add Event
                   </Button>
@@ -309,7 +313,7 @@ const CalendarSection = () => {
             <p className="text-muted-foreground text-sm">No upcoming events</p>
           ) : (
             upcomingEvents.map(event => (
-              <div key={event.id} className="flex items-center justify-between p-3 border rounded-lg">
+              <div key={event.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                 <div className="flex items-center space-x-3">
                   <CalendarIcon className="w-4 h-4 text-muted-foreground" />
                   <div>
@@ -328,18 +332,25 @@ const CalendarSection = () => {
         </CardContent>
       </Card>
 
-      {/* Future Integration Notice */}
-      <Card className="border-dashed">
+      {/* Google Calendar Integration Notice */}
+      <Card className="border-dashed border-2">
         <CardContent className="pt-6">
-          <div className="text-center">
-            <CalendarIcon className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-            <h4 className="font-medium mb-1">Google Calendar Integration</h4>
-            <p className="text-sm text-muted-foreground mb-3">
-              Sync your study schedule with Google Calendar for better organization
-            </p>
-            <Button variant="outline" size="sm" disabled>
-              Coming Soon
-            </Button>
+          <div className="text-center space-y-3">
+            <CalendarIcon className="w-8 h-8 mx-auto text-muted-foreground" />
+            <div>
+              <h4 className="font-medium mb-1">Google Calendar Integration</h4>
+              <p className="text-sm text-muted-foreground mb-4">
+                Sync your study schedule with Google Calendar for better organization
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Button variant="outline" size="sm" disabled className="w-full">
+                Coming Soon - Two-way Sync
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Full Google Calendar integration with automatic sync is under development
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
