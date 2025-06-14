@@ -23,7 +23,7 @@ const Profile = () => {
   const { profileDetails, loading: profileLoading, saveProfileDetails } = useUserProfile();
   const { colleges, majors } = useCollegesAndMajors();
   const { activities, loading: activitiesLoading } = useUserActivities();
-  const { stats, loading: statsLoading, updateStats } = useUserStats();
+  const { stats, loading: statsLoading } = useUserStats();
   const { toast } = useToast();
   
   const [isEditing, setIsEditing] = useState(false);
@@ -45,6 +45,7 @@ const Profile = () => {
   // Load user data when available
   useEffect(() => {
     if (user) {
+      console.log('User data:', user);
       setUserProfile({
         full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
         email: user.email || '',
@@ -56,6 +57,7 @@ const Profile = () => {
   // Load profile details when available and reset form
   useEffect(() => {
     if (user) {
+      console.log('Profile details:', profileDetails);
       const baseData = {
         full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
         email: user.email || '',
@@ -99,22 +101,24 @@ const Profile = () => {
       if (userError) throw userError;
 
       // Update profile details
-      await saveProfileDetails({
+      const result = await saveProfileDetails({
         college: profileData.college,
         major: profileData.major,
         school_year: profileData.school_year,
         enable_mom_mode: profileData.enable_mom_mode
       });
 
-      setIsEditing(false);
-      
-      // Update local user profile state
-      setUserProfile(prev => ({
-        ...prev,
-        full_name: profileData.full_name
-      }));
+      if (result) {
+        setIsEditing(false);
+        
+        // Update local user profile state
+        setUserProfile(prev => ({
+          ...prev,
+          full_name: profileData.full_name
+        }));
 
-      console.log('Profile saved successfully');
+        console.log('Profile saved successfully');
+      }
 
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -158,7 +162,7 @@ const Profile = () => {
       }
 
       const fileExt = file.name.split('.').pop();
-      const filePath = `${user?.id}-${Math.random()}.${fileExt}`;
+      const filePath = `${user?.id}/${Date.now()}.${fileExt}`;
 
       console.log('Uploading to path:', filePath);
 
