@@ -6,10 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Save, Palette, Clock, Globe } from 'lucide-react';
 import { useUserSettings } from '@/hooks/useUserSettings';
+import { useTheme } from '@/contexts/ThemeProvider';
 import { useToast } from '@/hooks/use-toast';
 
 const AppearanceSettings = () => {
   const { settings, loading, updateSettings } = useUserSettings();
+  const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
@@ -23,7 +25,7 @@ const AppearanceSettings = () => {
   const themes = [
     { value: 'light', label: 'Light' },
     { value: 'dark', label: 'Dark' },
-    { value: 'system', label: 'System' }
+    { value: 'system', label: 'System Default' }
   ];
 
   const languages = [
@@ -50,14 +52,20 @@ const AppearanceSettings = () => {
   useEffect(() => {
     if (settings) {
       const newFormData = {
-        theme: settings.theme || 'light',
+        theme: (settings.theme || theme) as 'light' | 'dark' | 'system',
         language: settings.language || 'en',
         timezone: settings.timezone || 'UTC'
       };
       setFormData(newFormData);
       setHasChanges(false);
     }
-  }, [settings]);
+  }, [settings, theme]);
+
+  const handleThemeChange = (value: 'light' | 'dark' | 'system') => {
+    setFormData(prev => ({ ...prev, theme: value }));
+    setTheme(value); // Apply theme immediately
+    setHasChanges(true);
+  };
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -86,8 +94,8 @@ const AppearanceSettings = () => {
       <Card className="border-0 shadow-sm">
         <CardContent className="p-8">
           <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-10 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
           </div>
         </CardContent>
       </Card>
@@ -119,7 +127,7 @@ const AppearanceSettings = () => {
             <Label htmlFor="theme">Theme</Label>
             <Select
               value={formData.theme}
-              onValueChange={(value: 'light' | 'dark' | 'system') => handleChange('theme', value)}
+              onValueChange={handleThemeChange}
             >
               <SelectTrigger>
                 <SelectValue />

@@ -57,8 +57,8 @@ const NotificationSettings = () => {
       <Card className="border-0 shadow-sm">
         <CardContent className="p-8">
           <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-10 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
           </div>
         </CardContent>
       </Card>
@@ -85,11 +85,11 @@ const NotificationSettings = () => {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="notifications">Push Notifications</Label>
-              <p className="text-sm text-gray-500">Receive notifications about study sessions and activities</p>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between py-2">
+            <div className="space-y-1 flex-1">
+              <Label htmlFor="notifications" className="text-sm font-medium">Push Notifications</Label>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Receive notifications about study sessions and activities</p>
             </div>
             <Switch
               id="notifications"
@@ -98,10 +98,10 @@ const NotificationSettings = () => {
             />
           </div>
           
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="email_notifications">Email Notifications</Label>
-              <p className="text-sm text-gray-500">Receive email updates about important events</p>
+          <div className="flex items-center justify-between py-2">
+            <div className="space-y-1 flex-1">
+              <Label htmlFor="email_notifications" className="text-sm font-medium">Email Notifications</Label>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Receive email updates about important events</p>
             </div>
             <Switch
               id="email_notifications"
