@@ -29,6 +29,8 @@ export const useUserSettings = () => {
       return;
     }
 
+    console.log('Fetching settings for user:', user.id);
+
     try {
       const { data, error } = await supabase
         .from('user_settings')
@@ -36,9 +38,15 @@ export const useUserSettings = () => {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching settings:', error);
+        throw error;
+      }
       
+      console.log('Fetched settings:', data);
+
       if (!data) {
+        console.log('No settings found, creating initial settings');
         // Create initial settings record if none exists
         const { data: newSettings, error: insertError } = await supabase
           .from('user_settings')
@@ -54,20 +62,18 @@ export const useUserSettings = () => {
           .select()
           .single();
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('Error creating settings:', insertError);
+          throw insertError;
+        }
         
-        // Type check the theme before setting
-        if (newSettings && ['light', 'dark', 'system'].includes(newSettings.theme)) {
-          setSettings(newSettings as UserSettings);
-        }
+        console.log('Created new settings:', newSettings);
+        setSettings(newSettings as UserSettings);
       } else {
-        // Type check the theme before setting
-        if (['light', 'dark', 'system'].includes(data.theme)) {
-          setSettings(data as UserSettings);
-        }
+        setSettings(data as UserSettings);
       }
     } catch (error) {
-      console.error('Error fetching settings:', error);
+      console.error('Error in fetchSettings:', error);
       toast({
         title: "Error",
         description: "Failed to load settings",
@@ -81,32 +87,30 @@ export const useUserSettings = () => {
   const updateSettings = async (updates: Partial<Omit<UserSettings, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
     if (!user) return null;
 
+    console.log('Updating settings with:', updates);
+
     try {
       const { data, error } = await supabase
         .from('user_settings')
-        .upsert({
-          user_id: user.id,
+        .update({
           ...updates,
           updated_at: new Date().toISOString()
         })
+        .eq('user_id', user.id)
         .select()
         .single();
 
-      if (error) throw error;
-      
-      // Type check before setting
-      if (data && ['light', 'dark', 'system'].includes(data.theme)) {
-        setSettings(data as UserSettings);
+      if (error) {
+        console.error('Error updating settings:', error);
+        throw error;
       }
       
-      toast({
-        title: "Success",
-        description: "Settings updated successfully"
-      });
+      console.log('Updated settings:', data);
+      setSettings(data as UserSettings);
       
       return data;
     } catch (error) {
-      console.error('Error updating settings:', error);
+      console.error('Error in updateSettings:', error);
       toast({
         title: "Error",
         description: "Failed to update settings",
