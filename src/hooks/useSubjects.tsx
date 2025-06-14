@@ -138,6 +138,41 @@ export const useSubjects = () => {
     }
   };
 
+  // Add new subject to database
+  const addNewSubject = async (name: string, icon: string = '📚', color: string = '#6B7280') => {
+    try {
+      const { data, error } = await supabase
+        .from('subjects')
+        .insert({ 
+          name: name.trim(), 
+          icon,
+          color
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "New subject added successfully"
+      });
+      
+      // Refresh subjects list
+      await fetchSubjects();
+      
+      return data;
+    } catch (error) {
+      console.error('Error adding new subject:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add new subject",
+        variant: "destructive"
+      });
+      return null;
+    }
+  };
+
   useEffect(() => {
     fetchSubjects();
   }, []);
@@ -157,6 +192,7 @@ export const useSubjects = () => {
     loading,
     addUserSubject,
     removeUserSubject,
+    addNewSubject,
     refetch: () => {
       fetchSubjects();
       fetchUserSubjects();

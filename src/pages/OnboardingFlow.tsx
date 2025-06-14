@@ -24,7 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const OnboardingFlow = () => {
   const { user, loading: authLoading } = useAuth();
-  const { subjects, userSubjects, loading, addUserSubject, removeUserSubject, refetch } = useSubjects();
+  const { subjects, userSubjects, loading, addUserSubject, removeUserSubject, addNewSubject, refetch } = useSubjects();
   const { colleges, majors, addCollege, addMajor } = useCollegesAndMajors();
   const { saveProfileDetails } = useUserProfile();
   const [currentStep, setCurrentStep] = useState(1);
@@ -111,27 +111,16 @@ const OnboardingFlow = () => {
     
     setAddingSubject(true);
     try {
-      const { data, error } = await supabase
-        .from('subjects')
-        .insert({ 
-          name: newSubjectName.trim(), 
-          icon: '📚',
-          color: '#6B7280'
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      const newSubject = await addNewSubject(newSubjectName.trim());
       
-      // Add to selected subjects
-      setSelectedSubjects(prev => [...prev, data.id]);
-      
-      // Reset form
-      setNewSubjectName('');
-      setShowAddNewSubject(false);
-      
-      // Refresh subjects list
-      refetch();
+      if (newSubject) {
+        // Add to selected subjects
+        setSelectedSubjects(prev => [...prev, newSubject.id]);
+        
+        // Reset form
+        setNewSubjectName('');
+        setShowAddNewSubject(false);
+      }
     } catch (error) {
       console.error('Error adding new subject:', error);
     } finally {
@@ -139,9 +128,34 @@ const OnboardingFlow = () => {
     }
   };
 
-  // Get subjects that are not already selected
-  const getAvailableSubjects = () => {
-    return subjects.filter(subject => !selectedSubjects.includes(subject.id));
+  // Get subjects for main grid (limit to first 12 most common ones)
+  const getMainGridSubjects = () => {
+    const commonSubjectNames = [
+      'Mathematics', 'Science', 'English', 'History', 'Computer Science', 'Art',
+      'Music', 'Physical Education', 'Biology', 'Chemistry', 'Physics', 'Geography'
+    ];
+    
+    const commonSubjects = subjects.filter(subject => 
+      commonSubjectNames.includes(subject.name)
+    ).slice(0, 12);
+    
+    // If we don't have enough common subjects, fill with others
+    if (commonSubjects.length < 12) {
+      const remainingSubjects = subjects
+        .filter(subject => !commonSubjectNames.includes(subject.name))
+        .slice(0, 12 - commonSubjects.length);
+      return [...commonSubjects, ...remainingSubjects];
+    }
+    
+    return commonSubjects;
+  };
+
+  // Get subjects that are not in the main grid for the dropdown
+  const getDropdownSubjects = () => {
+    const mainGridSubjectIds = getMainGridSubjects().map(s => s.id);
+    return subjects
+      .filter(subject => !mainGridSubjectIds.includes(subject.id) && !selectedSubjects.includes(subject.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
   };
 
   const handleAddCustomCollege = async () => {
@@ -237,6 +251,9 @@ const OnboardingFlow = () => {
       </div>
     );
   }
+
+  const mainGridSubjects = getMainGridSubjects();
+  const dropdownSubjects = getDropdownSubjects();
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
@@ -338,7 +355,7 @@ const OnboardingFlow = () => {
             {currentStep === 1 && (
               <div className="animate-fade-in">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                  {subjects.map((subject) => {
+                  {mainGridSubjects.map((subject) => {
                     const isSelected = selectedSubjects.includes(subject.id);
                     
                     return (
@@ -374,17 +391,17 @@ const OnboardingFlow = () => {
                     );
                   })}
                   
-                  {/* Add More Subjects Dropdown */}
+                  {/* Browse More Subjects Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <div className="relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg border-gray-200 hover:border-gray-400">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-2">
-                              <span className="text-2xl">➕</span>
-                              <h3 className="font-semibold text-black">Add More</h3>
+                              <span className="text-2xl">🔍</span>
+                              <h3 className="font-semibold text-black">Browse More</h3>
                             </div>
-                            <p className="text-sm text-gray-600">Browse all subjects</p>
+                            <p className="text-sm text-gray-600">Find more subjects</p>
                           </div>
                           <div className="ml-2">
                             <ChevronDown className="w-6 h-6 text-gray-400" />
@@ -393,9 +410,9 @@ const OnboardingFlow = () => {
                       </div>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-80 max-h-80 overflow-y-auto bg-white border border-gray-300 shadow-lg">
-                      {getAvailableSubjects().length > 0 ? (
+                      {dropdownSubjects.length > 0 ? (
                         <>
-                          {getAvailableSubjects().map((subject) => (
+                          {dropdownSubjects.map((subject) => (
                             <DropdownMenuItem
                               key={subject.id}
                               onClick={() => toggleSubject(subject.id)}
