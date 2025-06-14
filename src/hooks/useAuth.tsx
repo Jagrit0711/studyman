@@ -20,6 +20,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasRedirected, setHasRedirected] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -31,11 +32,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         setLoading(false);
 
-        // Handle authentication events without immediate redirects
-        if (event === 'SIGNED_IN' && session?.user) {
+        // Only handle redirection for SIGNED_IN event and prevent multiple redirects
+        if (event === 'SIGNED_IN' && session?.user && !hasRedirected) {
           console.log('User signed in, checking onboarding status...');
+          setHasRedirected(true);
           
-          // Use setTimeout to prevent immediate redirect conflicts
+          // Small delay to prevent conflicts with other navigation
           setTimeout(async () => {
             try {
               const { data: profile, error } = await supabase
@@ -66,7 +68,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 window.location.href = '/onboarding';
               }
             }
-          }, 500); // Increased delay to prevent conflicts
+          }, 100);
+        }
+
+        // Reset redirect flag when user signs out
+        if (event === 'SIGNED_OUT') {
+          setHasRedirected(false);
         }
       }
     );
@@ -79,7 +86,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [hasRedirected]);
 
   const signUp = async (email: string, password: string, metadata?: any) => {
     try {
@@ -160,6 +167,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
+      setHasRedirected(false); // Reset redirect flag
       const { error } = await supabase.auth.signOut();
       
       if (error) {
