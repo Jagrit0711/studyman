@@ -50,9 +50,9 @@ const Landing = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors">
+    <div className="min-h-screen bg-white dark:bg-black transition-colors">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
+      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-black/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -62,10 +62,10 @@ const Landing = () => {
             
             <div className="flex items-center space-x-4">
               <Link to="/login">
-                <Button variant="ghost" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800">Sign In</Button>
+                <Button variant="ghost" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">Sign In</Button>
               </Link>
               <Link to="/signup">
-                <Button className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100">Get Started</Button>
+                <Button className="bg-gray-900 dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100">Get Started</Button>
               </Link>
             </div>
           </div>
@@ -86,13 +86,13 @@ const Landing = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/signup">
-              <Button size="lg" className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 text-lg px-8 py-3">
+              <Button size="lg" className="bg-gray-900 dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 text-lg px-8 py-3">
                 Start Studying Free
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
             <Link to="/login">
-              <Button variant="outline" size="lg" className="text-lg px-8 py-3 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800">
+              <Button variant="outline" size="lg" className="text-lg px-8 py-3 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900">
                 Sign In
               </Button>
             </Link>
@@ -101,7 +101,7 @@ const Landing = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-4 bg-gray-50 dark:bg-gray-800">
+      <section className="py-20 px-4 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4 font-mono">
@@ -116,7 +116,7 @@ const Landing = () => {
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
-                <Card key={index} className="text-center hover:shadow-lg transition-shadow bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                <Card key={index} className="text-center hover:shadow-lg transition-shadow bg-white dark:bg-black border-gray-200 dark:border-gray-700">
                   <CardHeader>
                     <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
                       <Icon className="w-6 h-6 text-gray-700 dark:text-gray-300" />
@@ -158,7 +158,7 @@ const Landing = () => {
                 ))}
               </div>
             </div>
-            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-8 text-center">
+            <div className="bg-gray-100 dark:bg-gray-900 rounded-lg p-8 text-center">
               <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2">10,000+</div>
               <div className="text-gray-600 dark:text-gray-400 mb-4">Active Students</div>
               <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2">500+</div>
@@ -171,7 +171,7 @@ const Landing = () => {
       </section>
 
       {/* Testimonials */}
-      <section className="py-20 px-4 bg-gray-50 dark:bg-gray-800">
+      <section className="py-20 px-4 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4 font-mono">
@@ -184,7 +184,7 @@ const Landing = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+              <Card key={index} className="hover:shadow-lg transition-shadow bg-white dark:bg-black border-gray-200 dark:border-gray-700">
                 <CardContent className="p-6">
                   <div className="flex mb-4">
                     {[...Array(testimonial.rating)].map((_, i) => (
@@ -204,7 +204,7 @@ const Landing = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 bg-gray-900 dark:bg-gray-950 text-white">
+      <section className="py-20 px-4 bg-black dark:bg-black text-white">
         <div className="container mx-auto max-w-4xl text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4 font-mono">
             Ready to Transform Your Study Habits?
@@ -213,7 +213,7 @@ const Landing = () => {
             Join the community of students who are already studying smarter, not harder.
           </p>
           <Link to="/signup">
-            <Button size="lg" className="bg-white dark:bg-gray-100 text-gray-900 dark:text-gray-800 hover:bg-gray-100 dark:hover:bg-gray-200 text-lg px-8 py-3">
+            <Button size="lg" className="bg-white dark:bg-white text-black dark:text-black hover:bg-gray-100 dark:hover:bg-gray-200 text-lg px-8 py-3">
               Get Started for Free
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
@@ -222,7 +222,7 @@ const Landing = () => {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+      <footer className="py-12 px-4 bg-white dark:bg-black border-t border-gray-200 dark:border-gray-800">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center">
             <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2 font-mono">Zylo Study</div>
