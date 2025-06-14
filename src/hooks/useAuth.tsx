@@ -32,8 +32,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setLoading(false);
 
         // Handle user registration - redirect to onboarding
-        if (event === 'SIGNED_UP' && session?.user) {
-          console.log('User signed up, redirecting to onboarding');
+        if (event === 'USER_UPDATED' && session?.user && !session.user.email_confirmed_at) {
+          console.log('User signed up, waiting for email confirmation');
+        }
+        else if (event === 'USER_UPDATED' && session?.user && session.user.email_confirmed_at) {
+          console.log('Email confirmed, redirecting to onboarding');
           window.location.href = '/onboarding';
         }
         // Handle user sign in - check if they need onboarding
@@ -45,7 +48,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .from('profiles')
                 .select('onboarding_completed')
                 .eq('id', session.user.id)
-                .single();
+                .maybeSingle();
               
               console.log('Profile check result:', profile, error);
               

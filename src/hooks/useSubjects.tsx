@@ -7,8 +7,9 @@ import { useToast } from './use-toast';
 interface Subject {
   id: string;
   name: string;
-  description: string | null;
   icon: string | null;
+  color: string | null;
+  created_at: string;
 }
 
 interface UserSubject {
@@ -57,8 +58,9 @@ export const useSubjects = () => {
           subjects (
             id,
             name,
-            description,
-            icon
+            icon,
+            color,
+            created_at
           )
         `)
         .eq('user_id', user.id);
