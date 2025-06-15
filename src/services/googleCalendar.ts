@@ -1,4 +1,3 @@
-
 interface GoogleCalendarEvent {
   id?: string;
   summary: string;
@@ -20,9 +19,8 @@ interface GoogleCalendarResponse {
 class GoogleCalendarService {
   // Your Google OAuth Client ID
   private clientId = '240473196565-7fi2k9hvvts0466180fldca3rr9nikf3.apps.googleusercontent.com';
-  // REPLACE THIS WITH YOUR ACTUAL API KEY FROM GOOGLE CLOUD CONSOLE
-  // Get your API key from: https://console.cloud.google.com/apis/credentials
-  private apiKey = 'YOUR_GOOGLE_API_KEY_HERE'; // ← Replace this with your actual API key
+  // Your Google API Key
+  private apiKey = 'AIzaSyA6Y5AVrUqTQw-VsV1h3SK25IMuITi9oXQ';
   private discoveryDoc = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
   private scopes = 'https://www.googleapis.com/auth/calendar';
   
@@ -40,7 +38,7 @@ class GoogleCalendarService {
     console.log('Starting Google Calendar initialization...');
 
     // Check if API key is still the placeholder
-    if (this.apiKey === 'YOUR_GOOGLE_API_KEY_HERE' || this.apiKey === 'AIzaSyA6Y5AVrUqTQw-VsV1h3SK25IMuITi9oXQ') {
+    if (this.apiKey === 'YOUR_GOOGLE_API_KEY_HERE') {
       const errorMessage = 'Please set your Google API key in the googleCalendar.ts file. You can get one from the Google Cloud Console.';
       console.error(errorMessage);
       throw new Error(errorMessage);
