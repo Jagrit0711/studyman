@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,10 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Plus, Video, Calendar as CalendarIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import TodoItem from './TodoItem';
 
 export interface Todo {
@@ -28,6 +29,7 @@ interface NewTodoForm {
   description: string;
   priority: 'low' | 'medium' | 'high';
   deadline: string;
+  syncToGoogle: boolean;
 }
 
 const UpcomingSection = () => {
@@ -38,11 +40,16 @@ const UpcomingSection = () => {
     title: '',
     description: '',
     priority: 'medium',
-    deadline: ''
+    deadline: '',
+    syncToGoogle: true
   });
 
   const { user } = useAuth();
   const { toast } = useToast();
+  const {
+    isConnected: isGoogleCalendarConnected,
+    syncEventToGoogleCalendar,
+  } = useGoogleCalendar();
 
   // Fetch todos from Supabase
   const fetchTodos = async () => {
@@ -91,6 +98,7 @@ const UpcomingSection = () => {
     if (!newTodo.title.trim() || !user) return;
 
     try {
+      // First, create the task in Supabase
       const { data, error } = await supabase
         .from('todos')
         .insert({
@@ -124,16 +132,56 @@ const UpcomingSection = () => {
         createdAt: new Date(data.created_at)
       };
 
+      // Sync to Google Calendar if connected and user wants to sync
+      if (newTodo.syncToGoogle && isGoogleCalendarConnected && newTodo.deadline) {
+        try {
+          const deadlineDate = new Date(newTodo.deadline);
+          const dateStr = deadlineDate.toISOString().split('T')[0];
+          const timeStr = deadlineDate.toTimeString().slice(0, 5);
+          
+          await syncEventToGoogleCalendar(
+            newTodo.title,
+            dateStr,
+            timeStr,
+            'assignment'
+          );
+          console.log('Task synced to Google Calendar successfully');
+          toast({
+            title: "Success",
+            description: "Task created and synced to Google Calendar"
+          });
+        } catch (error) {
+          console.error('Failed to sync task to Google Calendar:', error);
+          toast({
+            title: "Partial Success",
+            description: "Task created locally but failed to sync to Google Calendar",
+            variant: "destructive"
+          });
+        }
+      } else {
+        toast({
+          title: "Success",
+          description: "Task added successfully"
+        });
+      }
+
       setTodos(prev => [newTodoItem, ...prev]);
-      setNewTodo({ title: '', description: '', priority: 'medium', deadline: '' });
+      setNewTodo({ 
+        title: '', 
+        description: '', 
+        priority: 'medium', 
+        deadline: '',
+        syncToGoogle: isGoogleCalendarConnected 
+      });
       setIsAddDialogOpen(false);
 
-      toast({
-        title: "Success",
-        description: "Task added successfully"
-      });
     } catch (error) {
       console.error('Error in handleAddTodo:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add task",
+        variant: "destructive"
+      });
     }
   };
 
@@ -307,6 +355,18 @@ const UpcomingSection = () => {
                     onChange={(e) => setNewTodo(prev => ({ ...prev, deadline: e.target.value }))}
                   />
                 </div>
+                {isGoogleCalendarConnected && newTodo.deadline && (
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="sync-google"
+                      checked={newTodo.syncToGoogle}
+                      onCheckedChange={(checked) => setNewTodo(prev => ({ ...prev, syncToGoogle: checked }))}
+                    />
+                    <Label htmlFor="sync-google" className="text-sm">
+                      Sync to Google Calendar
+                    </Label>
+                  </div>
+                )}
                 <div className="flex space-x-2">
                   <Button onClick={handleAddTodo} className="flex-1">
                     Add Task
