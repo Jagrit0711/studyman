@@ -1,71 +1,51 @@
 
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, BookOpen, Video, MessageSquare, Star, ArrowRight, CheckCircle } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Users, BookOpen, Video, MessageSquare, ArrowRight, Play, Sparkles, Zap } from 'lucide-react';
 
 const Landing = () => {
   const features = [
     {
       icon: Video,
       title: 'Virtual Study Rooms',
-      description: 'Create or join study rooms with video chat, screen sharing, and collaborative tools.'
+      description: 'Immersive collaborative spaces with real-time sync and focus modes.'
     },
     {
       icon: Users,
-      title: 'Study Groups',
-      description: 'Connect with fellow students studying the same subjects and form lasting study partnerships.'
+      title: 'Study Circles',
+      description: 'Connect with like-minded learners and build your academic network.'
     },
     {
       icon: MessageSquare,
-      title: 'Interactive Feed',
-      description: 'Share questions, resources, and study tips with the community in real-time.'
+      title: 'Live Feed',
+      description: 'Share insights, ask questions, and stay connected with your community.'
     },
     {
       icon: BookOpen,
-      title: 'Subject Organization',
-      description: 'Organize your studies by subject and find others working on similar topics.'
-    }
-  ];
-
-  const testimonials = [
-    {
-      name: 'Sarah Chen',
-      role: 'Computer Science Student',
-      content: 'Zylo Study transformed how I approach group studying. The virtual rooms make it so easy to collaborate.',
-      rating: 5
-    },
-    {
-      name: 'Mike Rodriguez',
-      role: 'Pre-Med Student',
-      content: 'Found my study group here and we\'ve been crushing our exams together. Highly recommend!',
-      rating: 5
-    },
-    {
-      name: 'Emily Johnson',
-      role: 'Engineering Student',
-      content: 'The best platform for collaborative learning. Love the community aspect and the tools.',
-      rating: 5
+      title: 'Smart Organization',
+      description: 'AI-powered subject matching and personalized study recommendations.'
     }
   ];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black transition-colors">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-black/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
-        <div className="container mx-auto px-4 py-4">
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Minimalist Header */}
+      <header className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b border-border">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white font-mono">Zylo Study</div>
-              <span className="text-sm text-gray-500 dark:text-gray-400 font-mono">by Zylon Labs</span>
+            <div className="flex items-center space-x-4">
+              <div className="text-2xl font-bold font-mono tracking-tight">Zylo Study</div>
+              <div className="h-1 w-1 bg-muted-foreground rounded-full"></div>
+              <span className="text-sm text-muted-foreground font-mono">Zylon Labs</span>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               <Link to="/login">
-                <Button variant="ghost" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900">Sign In</Button>
+                <Button variant="ghost" className="font-medium">Sign In</Button>
               </Link>
               <Link to="/signup">
-                <Button className="bg-gray-900 dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100">Get Started</Button>
+                <Button className="font-medium">Get Started</Button>
               </Link>
             </div>
           </div>
@@ -73,60 +53,67 @@ const Landing = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto text-center max-w-4xl">
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6 font-mono">
-            Study Together,
+      <section className="relative py-32 px-6 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted/20"></div>
+        <div className="container mx-auto text-center max-w-5xl relative z-10">
+          <div className="inline-flex items-center space-x-2 bg-muted/50 rounded-full px-4 py-2 mb-8 border border-border">
+            <Sparkles className="w-4 h-4" />
+            <span className="text-sm font-medium">Study smarter, not harder</span>
+          </div>
+          
+          <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold font-mono mb-8 leading-none tracking-tight">
+            Study
             <br />
-            <span className="text-gray-600 dark:text-gray-300">Succeed Together</span>
+            <span className="text-muted-foreground">Together</span>
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-            Join thousands of students collaborating in virtual study rooms, sharing knowledge, 
-            and achieving academic excellence together.
+          
+          <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed">
+            The collaborative study platform designed for the next generation of learners.
+            Connect, create, and conquer your academic goals.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link to="/signup">
-              <Button size="lg" className="bg-gray-900 dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 text-lg px-8 py-3">
-                Start Studying Free
-                <ArrowRight className="ml-2 w-5 h-5" />
+              <Button size="lg" className="text-lg px-8 py-6 font-medium group">
+                Start for Free
+                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
-            <Link to="/login">
-              <Button variant="outline" size="lg" className="text-lg px-8 py-3 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900">
-                Sign In
-              </Button>
-            </Link>
+            <Button variant="outline" size="lg" className="text-lg px-8 py-6 font-medium group">
+              <Play className="mr-2 w-5 h-5" />
+              Watch Demo
+            </Button>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-20 px-4 bg-gray-50 dark:bg-gray-900">
-        <div className="container mx-auto max-w-6xl">
+      {/* Features Grid */}
+      <section className="py-24 px-6 bg-muted/30">
+        <div className="container mx-auto max-w-7xl">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4 font-mono">
-              Everything You Need to Study Smart
+            <h2 className="text-4xl md:text-5xl font-bold font-mono mb-6 tracking-tight">
+              Built for focus
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Powerful tools designed to make collaborative studying effortless and effective.
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Everything you need to study effectively in one seamless platform.
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
-                <Card key={index} className="text-center hover:shadow-lg transition-shadow bg-white dark:bg-black border-gray-200 dark:border-gray-700">
-                  <CardHeader>
-                    <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mx-auto mb-4">
-                      <Icon className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+                <Card key={index} className="group hover:shadow-lg transition-all duration-300 border-border bg-card/50 backdrop-blur-sm">
+                  <CardContent className="p-8">
+                    <div className="flex items-start space-x-4">
+                      <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
+                        <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
+                      </div>
                     </div>
-                    <CardTitle className="text-lg text-gray-900 dark:text-white">{feature.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-gray-600 dark:text-gray-300">
-                      {feature.description}
-                    </CardDescription>
                   </CardContent>
                 </Card>
               );
@@ -135,101 +122,58 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Benefits Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6 font-mono">
-                Why Students Choose Zylo Study
-              </h2>
-              <div className="space-y-4">
-                {[
-                  'Connect with students from your university or worldwide',
-                  'Organize study sessions by subject and difficulty level',
-                  'Share resources, notes, and study materials instantly',
-                  'Track your study progress and build lasting connections',
-                  'Access 24/7 study rooms whenever you need them'
-                ].map((benefit, index) => (
-                  <div key={index} className="flex items-center space-x-3">
-                    <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-500 flex-shrink-0" />
-                    <span className="text-gray-700 dark:text-gray-300">{benefit}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="bg-gray-100 dark:bg-gray-900 rounded-lg p-8 text-center">
-              <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2">10,000+</div>
-              <div className="text-gray-600 dark:text-gray-400 mb-4">Active Students</div>
-              <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2">500+</div>
-              <div className="text-gray-600 dark:text-gray-400 mb-4">Study Rooms Daily</div>
-              <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2">95%</div>
-              <div className="text-gray-600 dark:text-gray-400">Success Rate</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-20 px-4 bg-gray-50 dark:bg-gray-900">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4 font-mono">
-              What Students Say
-            </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300">
-              Join thousands of successful students already using Zylo Study
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow bg-white dark:bg-black border-gray-200 dark:border-gray-700">
-                <CardContent className="p-6">
-                  <div className="flex mb-4">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-gray-700 dark:text-gray-300 mb-4">"{testimonial.content}"</p>
-                  <div>
-                    <div className="font-semibold text-gray-900 dark:text-white">{testimonial.name}</div>
-                    <div className="text-gray-600 dark:text-gray-400 text-sm">{testimonial.role}</div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 px-4 bg-black dark:bg-black text-white">
+      {/* Visual Break */}
+      <section className="py-24 px-6">
         <div className="container mx-auto max-w-4xl text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 font-mono">
-            Ready to Transform Your Study Habits?
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-border to-transparent h-px top-1/2"></div>
+            <div className="relative bg-background px-8">
+              <Zap className="w-8 h-8 mx-auto text-muted-foreground" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Enhanced CTA */}
+      <section className="py-32 px-6 bg-foreground text-background">
+        <div className="container mx-auto max-w-4xl text-center">
+          <h2 className="text-4xl md:text-5xl font-bold font-mono mb-6 tracking-tight">
+            Ready to level up?
           </h2>
-          <p className="text-xl text-gray-300 dark:text-gray-400 mb-8">
-            Join the community of students who are already studying smarter, not harder.
+          <p className="text-xl text-background/70 mb-10 max-w-2xl mx-auto">
+            Join thousands of students already transforming their study experience.
           </p>
           <Link to="/signup">
-            <Button size="lg" className="bg-white dark:bg-white text-black dark:text-black hover:bg-gray-100 dark:hover:bg-gray-200 text-lg px-8 py-3">
-              Get Started for Free
-              <ArrowRight className="ml-2 w-5 h-5" />
+            <Button 
+              size="lg" 
+              variant="outline"
+              className="text-lg px-10 py-6 font-medium bg-background text-foreground hover:bg-background/90 border-background/20 group"
+            >
+              Get Started Now
+              <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Button>
           </Link>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-4 bg-white dark:bg-black border-t border-gray-200 dark:border-gray-800">
+      {/* Minimal Footer */}
+      <footer className="py-12 px-6 border-t border-border">
         <div className="container mx-auto max-w-6xl">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2 font-mono">Zylo Study</div>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">by Zylon Labs</p>
-            <p className="text-gray-500 dark:text-gray-500 text-sm">
-              © 2024 Zylon Labs. All rights reserved.
-            </p>
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+            <div className="flex items-center space-x-4">
+              <div className="text-lg font-bold font-mono">Zylo Study</div>
+              <div className="h-1 w-1 bg-muted-foreground rounded-full"></div>
+              <span className="text-sm text-muted-foreground">by Zylon Labs</span>
+            </div>
+            <div className="flex items-center space-x-6">
+              <Link to="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Privacy
+              </Link>
+              <Link to="/terms-conditions" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Terms
+              </Link>
+              <span className="text-sm text-muted-foreground">© 2024</span>
+            </div>
           </div>
         </div>
       </footer>
