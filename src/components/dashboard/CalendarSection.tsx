@@ -41,7 +41,7 @@ const CalendarSection = () => {
     date: '',
     time: '',
     type: 'study',
-    syncToGoogle: false
+    syncToGoogle: true // Default to true for better UX
   });
 
   const { user } = useAuth();
@@ -53,7 +53,6 @@ const CalendarSection = () => {
     disconnectGoogleCalendar,
     syncEventToGoogleCalendar,
     fetchEvents: fetchGoogleEvents,
-    events: googleEvents,
   } = useGoogleCalendar();
 
   // Fetch calendar events from Supabase
@@ -134,8 +133,25 @@ const CalendarSection = () => {
         fetchGoogleCalendarEvents()
       ]);
 
-      const allEvents = [...(localEvents || []), ...(googleEvents || [])];
-      console.log('All events fetched:', allEvents);
+      // Remove duplicates by creating a Set of unique event identifiers
+      const uniqueEvents = new Map<string, CalendarEvent>();
+      
+      // Add local events first
+      localEvents?.forEach(event => {
+        const key = `${event.title}_${event.date.toISOString().split('T')[0]}_${event.time}`;
+        uniqueEvents.set(key, event);
+      });
+
+      // Add Google events only if they don't already exist
+      googleEvents?.forEach(event => {
+        const key = `${event.title}_${event.date.toISOString().split('T')[0]}_${event.time}`;
+        if (!uniqueEvents.has(key)) {
+          uniqueEvents.set(key, event);
+        }
+      });
+
+      const allEvents = Array.from(uniqueEvents.values());
+      console.log('All events fetched and deduplicated:', allEvents);
       setEvents(allEvents);
     } catch (error) {
       console.error('Error fetching all events:', error);
@@ -144,21 +160,18 @@ const CalendarSection = () => {
     }
   };
 
+  // Only fetch events when user changes or Google Calendar connection status changes
   useEffect(() => {
-    fetchAllEvents();
-  }, [user, isGoogleCalendarConnected]);
-
-  // Refetch when Google events change
-  useEffect(() => {
-    if (isGoogleCalendarConnected && googleEvents.length > 0) {
+    if (user) {
       fetchAllEvents();
     }
-  }, [googleEvents]);
+  }, [user, isGoogleCalendarConnected]);
 
   const handleAddEvent = async () => {
     if (!newEvent.title.trim() || !newEvent.date || !newEvent.time || !user) return;
 
     try {
+      // First, create the event in Supabase
       const { data, error } = await supabase
         .from('calendar_events')
         .insert({
@@ -181,6 +194,7 @@ const CalendarSection = () => {
         return;
       }
 
+      // Sync to Google Calendar if connected and user wants to sync
       if (newEvent.syncToGoogle && isGoogleCalendarConnected) {
         try {
           await syncEventToGoogleCalendar(
@@ -190,27 +204,41 @@ const CalendarSection = () => {
             newEvent.type
           );
           console.log('Event synced to Google Calendar successfully');
+          toast({
+            title: "Success",
+            description: "Event created and synced to Google Calendar"
+          });
         } catch (error) {
           console.error('Failed to sync to Google Calendar:', error);
           toast({
-            title: "Warning",
-            description: "Event created but failed to sync to Google Calendar",
+            title: "Partial Success",
+            description: "Event created locally but failed to sync to Google Calendar",
             variant: "destructive"
           });
         }
+      } else {
+        toast({
+          title: "Success",
+          description: "Event created successfully"
+        });
       }
 
-      await fetchAllEvents();
-
-      setNewEvent({ title: '', date: '', time: '', type: 'study', syncToGoogle: false });
+      // Reset form and close dialog
+      setNewEvent({ title: '', date: '', time: '', type: 'study', syncToGoogle: isGoogleCalendarConnected });
       setIsAddDialogOpen(false);
 
-      toast({
-        title: "Success",
-        description: "Event added successfully"
-      });
+      // Refresh events after a short delay to avoid race conditions
+      setTimeout(() => {
+        fetchAllEvents();
+      }, 1000);
+
     } catch (error) {
       console.error('Error in handleAddEvent:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create event",
+        variant: "destructive"
+      });
     }
   };
 
