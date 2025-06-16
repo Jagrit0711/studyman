@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { googleCalendarService } from '@/services/googleCalendar';
 import { useToast } from '@/hooks/use-toast';
@@ -30,12 +29,10 @@ export const useGoogleCalendar = () => {
         console.log('Initializing Google Calendar...');
         await googleCalendarService.initialize();
         
-        // Check connection status after initialization
         const connected = googleCalendarService.isSignedIn();
         console.log('Google Calendar connection status after init:', connected);
         setIsConnected(connected);
         
-        // If already connected, try to fetch events to verify the connection
         if (connected) {
           console.log('Already connected, verifying with a test fetch...');
           try {
@@ -47,6 +44,7 @@ export const useGoogleCalendar = () => {
           } catch (error) {
             console.log('Connection verification failed, may need to re-authenticate');
             setIsConnected(false);
+            localStorage.removeItem('google_calendar_token');
           }
         }
       } catch (error) {
@@ -68,7 +66,6 @@ export const useGoogleCalendar = () => {
       console.log('Connecting to Google Calendar...');
       await googleCalendarService.requestAccessToken();
       
-      // Verify connection
       const connected = googleCalendarService.isSignedIn();
       console.log('Connection verification:', connected);
       
@@ -128,10 +125,10 @@ export const useGoogleCalendar = () => {
     } catch (error) {
       console.error('Failed to fetch Google Calendar events:', error);
       
-      // If fetch fails, it might be due to expired token
       if (error.message?.includes('unauthorized') || error.message?.includes('invalid_token')) {
         console.log('Token might be expired, marking as disconnected');
         setIsConnected(false);
+        localStorage.removeItem('google_calendar_token');
       }
       
       toast({
@@ -155,7 +152,6 @@ export const useGoogleCalendar = () => {
       const createdEvent = await googleCalendarService.createEvent(event);
       console.log('Event created successfully:', createdEvent);
       
-      // Update local events list
       setEvents(prev => [...prev, createdEvent]);
       
       toast({
@@ -183,7 +179,7 @@ export const useGoogleCalendar = () => {
 
     try {
       const startDateTime = new Date(`${date}T${time}`);
-      const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
+      const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
 
       const event: Omit<GoogleCalendarEvent, 'id'> = {
         summary: title,

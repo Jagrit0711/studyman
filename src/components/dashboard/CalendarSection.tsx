@@ -99,13 +99,12 @@ const CalendarSection = () => {
 
     try {
       const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - 1); // Fetch events from last month
+      startDate.setMonth(startDate.getMonth() - 1);
       const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + 2); // Fetch events up to 2 months ahead
+      endDate.setMonth(endDate.getMonth() + 2);
 
       const googleEventsData = await fetchGoogleEvents(startDate, endDate);
       
-      // Convert Google events to our format with proper type mapping
       const mappedGoogleEvents: CalendarEvent[] = (googleEventsData || []).map(event => ({
         id: `google_${event.id}`,
         title: event.summary,
@@ -115,7 +114,7 @@ const CalendarSection = () => {
           minute: '2-digit',
           hour12: false 
         }),
-        type: event.eventType || 'meeting', // Use the determined event type
+        type: event.eventType || 'meeting',
         source: 'google'
       }));
 
@@ -182,7 +181,6 @@ const CalendarSection = () => {
         return;
       }
 
-      // Sync to Google Calendar if requested and connected
       if (newEvent.syncToGoogle && isGoogleCalendarConnected) {
         try {
           await syncEventToGoogleCalendar(
@@ -202,7 +200,6 @@ const CalendarSection = () => {
         }
       }
 
-      // Refresh events to include the new one
       await fetchAllEvents();
 
       setNewEvent({ title: '', date: '', time: '', type: 'study', syncToGoogle: false });
@@ -318,14 +315,15 @@ const CalendarSection = () => {
               }}
               modifiersStyles={{
                 hasEvents: { 
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)', // Light blue background
-                  border: '2px solid rgb(59, 130, 246)', // Blue border
+                  backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                  border: '2px solid rgb(34, 197, 94)',
                   borderRadius: '6px',
-                  fontWeight: 'bold'
+                  fontWeight: '600',
+                  position: 'relative'
                 }
               }}
               modifiersClassNames={{
-                hasEvents: 'relative after:content-["•"] after:absolute after:bottom-1 after:left-1/2 after:transform after:-translate-x-1/2 after:text-blue-600 after:text-xs'
+                hasEvents: 'relative after:content-["●"] after:absolute after:bottom-0 after:right-1 after:text-green-600 after:text-xs'
               }}
             />
           </div>

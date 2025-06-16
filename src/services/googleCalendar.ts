@@ -1,4 +1,3 @@
-
 interface GoogleCalendarEvent {
   id?: string;
   summary: string;
@@ -18,9 +17,7 @@ interface GoogleCalendarResponse {
 }
 
 class GoogleCalendarService {
-  // Your Google OAuth Client ID
   private clientId = '240473196565-7fi2k9hvvts0466180fldca3rr9nikf3.apps.googleusercontent.com';
-  // Your Google API Key
   private apiKey = 'AIzaSyA6Y5AVrUqTQw-VsV1h3SK25IMuITi9oXQ';
   private discoveryDoc = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
   private scopes = 'https://www.googleapis.com/auth/calendar';
@@ -38,7 +35,6 @@ class GoogleCalendarService {
 
     console.log('Starting Google Calendar initialization...');
 
-    // Check if API key is still the placeholder
     if (this.apiKey === 'YOUR_GOOGLE_API_KEY_HERE') {
       const errorMessage = 'Please set your Google API key in the googleCalendar.ts file. You can get one from the Google Cloud Console.';
       console.error(errorMessage);
@@ -46,12 +42,10 @@ class GoogleCalendarService {
     }
 
     try {
-      // Load Google APIs
       console.log('Loading Google APIs...');
       await this.loadGoogleAPIs();
       console.log('Google APIs loaded successfully');
       
-      // Initialize Google API client
       console.log('Initializing Google API client...');
       await new Promise((resolve, reject) => {
         this.gapi.load('client', async () => {
@@ -69,19 +63,17 @@ class GoogleCalendarService {
         });
       });
 
-      // Initialize Google Identity Services
       console.log('Initializing Google Identity Services...');
       this.tokenClient = this.google.accounts.oauth2.initTokenClient({
         client_id: this.clientId,
         scope: this.scopes,
-        callback: '', // Will be set when requesting access
+        callback: '',
       });
       console.log('Google Identity Services initialized successfully');
 
       this.isInitialized = true;
       console.log('Google Calendar service initialized successfully');
 
-      // Check if user is already signed in
       const token = this.gapi.client.getToken();
       if (token) {
         console.log('Found existing Google Calendar token');
@@ -117,7 +109,6 @@ class GoogleCalendarService {
         console.log('Google API script loaded');
         this.gapi = window.gapi;
         
-        // Load Google Identity Services
         console.log('Loading Google Identity Services script...');
         const gisScript = document.createElement('script');
         gisScript.src = 'https://accounts.google.com/gsi/client';
@@ -125,7 +116,6 @@ class GoogleCalendarService {
           console.log('Google Identity Services script loaded');
           this.google = window.google;
           
-          // Add a small delay to ensure scripts are fully loaded
           setTimeout(() => {
             resolve();
           }, 100);
@@ -172,12 +162,16 @@ class GoogleCalendarService {
             return;
           }
 
-          // Set the token in the gapi client for persistence
           this.gapi.client.setToken({
             access_token: resp.access_token
           });
           
-          console.log('Google Calendar access token received and set successfully');
+          localStorage.setItem('google_calendar_token', JSON.stringify({
+            access_token: resp.access_token,
+            timestamp: Date.now()
+          }));
+          
+          console.log('Google Calendar access token received and stored successfully');
           resolve(resp.access_token);
         };
 
@@ -293,9 +287,35 @@ class GoogleCalendarService {
 
   isSignedIn(): boolean {
     const token = this.gapi?.client?.getToken();
-    const signedIn = token !== null && token !== undefined;
-    console.log('Google Calendar sign-in status:', signedIn, token ? 'Token exists' : 'No token');
-    return signedIn;
+    if (token !== null && token !== undefined) {
+      console.log('Google Calendar sign-in status: true (active token)');
+      return true;
+    }
+
+    const storedToken = localStorage.getItem('google_calendar_token');
+    if (storedToken) {
+      try {
+        const tokenData = JSON.parse(storedToken);
+        const tokenAge = Date.now() - tokenData.timestamp;
+        const isTokenValid = tokenAge < 3600000; // 1 hour
+        
+        if (isTokenValid && tokenData.access_token) {
+          console.log('Restoring token from localStorage');
+          this.gapi?.client?.setToken({
+            access_token: tokenData.access_token
+          });
+          return true;
+        } else {
+          localStorage.removeItem('google_calendar_token');
+        }
+      } catch (error) {
+        console.error('Error parsing stored token:', error);
+        localStorage.removeItem('google_calendar_token');
+      }
+    }
+
+    console.log('Google Calendar sign-in status: false');
+    return false;
   }
 
   signOut() {
@@ -306,38 +326,33 @@ class GoogleCalendarService {
         this.google.accounts.oauth2.revoke(token.access_token);
         this.gapi.client.setToken('');
       }
+      localStorage.removeItem('google_calendar_token');
       console.log('Google Calendar signed out successfully');
     } catch (error) {
       console.error('Error signing out from Google Calendar:', error);
     }
   }
 
-  // Helper method to determine event type from Google Calendar event
   private determineEventType(event: GoogleCalendarEvent): 'study' | 'exam' | 'assignment' | 'meeting' {
     const title = event.summary?.toLowerCase() || '';
     const description = event.description?.toLowerCase() || '';
     
-    // Check for study-related keywords
-    if (title.includes('study') || title.includes('review') || title.includes('prep') || title.includes('practice')) {
-      return 'study';
-    }
-    
-    // Check for exam keywords
     if (title.includes('exam') || title.includes('test') || title.includes('quiz') || title.includes('midterm') || title.includes('final')) {
       return 'exam';
     }
     
-    // Check for assignment keywords
     if (title.includes('assignment') || title.includes('homework') || title.includes('project') || title.includes('due') || title.includes('submit')) {
       return 'assignment';
     }
     
-    // Check description for additional context
+    if (title.includes('study') || title.includes('review') || title.includes('prep') || title.includes('practice')) {
+      return 'study';
+    }
+    
     if (description.includes('study') || description.includes('homework') || description.includes('assignment')) {
       return title.includes('test') || title.includes('exam') ? 'exam' : 'study';
     }
     
-    // Default to meeting for other events
     return 'meeting';
   }
 
@@ -365,11 +380,15 @@ class GoogleCalendarService {
       const events = request.result.items || [];
       console.log(`Retrieved ${events.length} events from Google Calendar`);
       
-      // Add event type determination
       const eventsWithTypes = events.map(event => ({
         ...event,
         eventType: this.determineEventType(event)
       }));
+      
+      console.log('Events with determined types:', eventsWithTypes.map(e => ({ 
+        title: e.summary, 
+        type: e.eventType 
+      })));
       
       return eventsWithTypes;
     } catch (error) {
