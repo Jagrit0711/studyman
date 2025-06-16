@@ -1,3 +1,4 @@
+
 interface GoogleCalendarEvent {
   id?: string;
   summary: string;
@@ -79,6 +80,12 @@ class GoogleCalendarService {
 
       this.isInitialized = true;
       console.log('Google Calendar service initialized successfully');
+
+      // Check if user is already signed in
+      const token = this.gapi.client.getToken();
+      if (token) {
+        console.log('Found existing Google Calendar token');
+      }
     } catch (error) {
       console.error('Failed to initialize Google Calendar service:', error);
       console.error('Error details:', {
@@ -164,8 +171,13 @@ class GoogleCalendarService {
             reject(new Error('No access token received from Google'));
             return;
           }
+
+          // Set the token in the gapi client for persistence
+          this.gapi.client.setToken({
+            access_token: resp.access_token
+          });
           
-          console.log('Google Calendar access token received successfully');
+          console.log('Google Calendar access token received and set successfully');
           resolve(resp.access_token);
         };
 
@@ -282,7 +294,7 @@ class GoogleCalendarService {
   isSignedIn(): boolean {
     const token = this.gapi?.client?.getToken();
     const signedIn = token !== null && token !== undefined;
-    console.log('Google Calendar sign-in status:', signedIn);
+    console.log('Google Calendar sign-in status:', signedIn, token ? 'Token exists' : 'No token');
     return signedIn;
   }
 
@@ -297,6 +309,72 @@ class GoogleCalendarService {
       console.log('Google Calendar signed out successfully');
     } catch (error) {
       console.error('Error signing out from Google Calendar:', error);
+    }
+  }
+
+  // Helper method to determine event type from Google Calendar event
+  private determineEventType(event: GoogleCalendarEvent): 'study' | 'exam' | 'assignment' | 'meeting' {
+    const title = event.summary?.toLowerCase() || '';
+    const description = event.description?.toLowerCase() || '';
+    
+    // Check for study-related keywords
+    if (title.includes('study') || title.includes('review') || title.includes('prep') || title.includes('practice')) {
+      return 'study';
+    }
+    
+    // Check for exam keywords
+    if (title.includes('exam') || title.includes('test') || title.includes('quiz') || title.includes('midterm') || title.includes('final')) {
+      return 'exam';
+    }
+    
+    // Check for assignment keywords
+    if (title.includes('assignment') || title.includes('homework') || title.includes('project') || title.includes('due') || title.includes('submit')) {
+      return 'assignment';
+    }
+    
+    // Check description for additional context
+    if (description.includes('study') || description.includes('homework') || description.includes('assignment')) {
+      return title.includes('test') || title.includes('exam') ? 'exam' : 'study';
+    }
+    
+    // Default to meeting for other events
+    return 'meeting';
+  }
+
+  async getEventsWithTypes(startDate: Date, endDate: Date): Promise<Array<GoogleCalendarEvent & { eventType: 'study' | 'exam' | 'assignment' | 'meeting' }>> {
+    console.log('Checking Google Calendar sign-in status...');
+    
+    if (!this.isSignedIn()) {
+      console.error('Not signed in to Google Calendar');
+      throw new Error('Not signed in to Google Calendar');
+    }
+
+    try {
+      console.log('Fetching Google Calendar events from', startDate.toISOString(), 'to', endDate.toISOString());
+      
+      const request = await this.gapi.client.calendar.events.list({
+        calendarId: 'primary',
+        timeMin: startDate.toISOString(),
+        timeMax: endDate.toISOString(),
+        showDeleted: false,
+        singleEvents: true,
+        orderBy: 'startTime',
+      });
+
+      console.log('Google Calendar events response:', request.result);
+      const events = request.result.items || [];
+      console.log(`Retrieved ${events.length} events from Google Calendar`);
+      
+      // Add event type determination
+      const eventsWithTypes = events.map(event => ({
+        ...event,
+        eventType: this.determineEventType(event)
+      }));
+      
+      return eventsWithTypes;
+    } catch (error) {
+      console.error('Error fetching Google Calendar events:', error);
+      throw new Error(`Failed to fetch events from Google Calendar: ${error.message}`);
     }
   }
 }

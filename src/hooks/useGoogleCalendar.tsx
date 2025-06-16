@@ -15,6 +15,7 @@ interface GoogleCalendarEvent {
     dateTime: string;
     timeZone?: string;
   };
+  eventType?: 'study' | 'exam' | 'assignment' | 'meeting';
 }
 
 export const useGoogleCalendar = () => {
@@ -28,9 +29,26 @@ export const useGoogleCalendar = () => {
       try {
         console.log('Initializing Google Calendar...');
         await googleCalendarService.initialize();
+        
+        // Check connection status after initialization
         const connected = googleCalendarService.isSignedIn();
-        console.log('Google Calendar connection status:', connected);
+        console.log('Google Calendar connection status after init:', connected);
         setIsConnected(connected);
+        
+        // If already connected, try to fetch events to verify the connection
+        if (connected) {
+          console.log('Already connected, verifying with a test fetch...');
+          try {
+            const startDate = new Date();
+            const endDate = new Date();
+            endDate.setDate(endDate.getDate() + 1);
+            await googleCalendarService.getEventsWithTypes(startDate, endDate);
+            console.log('Connection verified successfully');
+          } catch (error) {
+            console.log('Connection verification failed, may need to re-authenticate');
+            setIsConnected(false);
+          }
+        }
       } catch (error) {
         console.error('Failed to initialize Google Calendar:', error);
         toast({
@@ -103,12 +121,19 @@ export const useGoogleCalendar = () => {
     setIsLoading(true);
     try {
       console.log('Fetching Google Calendar events...');
-      const googleEvents = await googleCalendarService.getEvents(startDate, endDate);
+      const googleEvents = await googleCalendarService.getEventsWithTypes(startDate, endDate);
       console.log('Fetched events:', googleEvents);
       setEvents(googleEvents);
       return googleEvents;
     } catch (error) {
       console.error('Failed to fetch Google Calendar events:', error);
+      
+      // If fetch fails, it might be due to expired token
+      if (error.message?.includes('unauthorized') || error.message?.includes('invalid_token')) {
+        console.log('Token might be expired, marking as disconnected');
+        setIsConnected(false);
+      }
+      
       toast({
         title: "Fetch Error",
         description: error instanceof Error ? error.message : "Failed to fetch Google Calendar events",

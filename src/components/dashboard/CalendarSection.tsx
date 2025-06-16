@@ -93,7 +93,7 @@ const CalendarSection = () => {
     }
   };
 
-  // Fetch Google Calendar events
+  // Fetch Google Calendar events with proper type mapping
   const fetchGoogleCalendarEvents = async () => {
     if (!isGoogleCalendarConnected) return [];
 
@@ -105,7 +105,7 @@ const CalendarSection = () => {
 
       const googleEventsData = await fetchGoogleEvents(startDate, endDate);
       
-      // Convert Google events to our format
+      // Convert Google events to our format with proper type mapping
       const mappedGoogleEvents: CalendarEvent[] = (googleEventsData || []).map(event => ({
         id: `google_${event.id}`,
         title: event.summary,
@@ -115,7 +115,7 @@ const CalendarSection = () => {
           minute: '2-digit',
           hour12: false 
         }),
-        type: 'meeting' as const, // Default type for Google events
+        type: event.eventType || 'meeting', // Use the determined event type
         source: 'google'
       }));
 
@@ -318,10 +318,14 @@ const CalendarSection = () => {
               }}
               modifiersStyles={{
                 hasEvents: { 
-                  backgroundColor: 'hsl(var(--primary))', 
-                  color: 'hsl(var(--primary-foreground))',
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)', // Light blue background
+                  border: '2px solid rgb(59, 130, 246)', // Blue border
+                  borderRadius: '6px',
                   fontWeight: 'bold'
                 }
+              }}
+              modifiersClassNames={{
+                hasEvents: 'relative after:content-["•"] after:absolute after:bottom-1 after:left-1/2 after:transform after:-translate-x-1/2 after:text-blue-600 after:text-xs'
               }}
             />
           </div>
