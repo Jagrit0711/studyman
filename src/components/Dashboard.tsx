@@ -8,9 +8,14 @@ import UpcomingSection from './dashboard/UpcomingSection';
 import CalendarSection from './dashboard/CalendarSection';
 import StudyRoomCard from './StudyRoomCard';
 import FeedPost from './FeedPost';
+import CreatePost from './CreatePost';
+import { usePosts } from '@/hooks/usePosts';
+import { useAuth } from '@/hooks/useAuth';
 
 const Dashboard = () => {
   const [activeView, setActiveView] = useState('overview');
+  const { posts, isLoading } = usePosts();
+  const { user } = useAuth();
 
   const studyRooms = [
     {
@@ -48,42 +53,6 @@ const Dashboard = () => {
       duration: '3h 15m',
       subject: 'Computer Science',
       host: 'Alex Kumar'
-    }
-  ];
-
-  const feedPosts = [
-    {
-      id: '1',
-      title: 'Best strategies for memorizing complex formulas?',
-      content: 'I\'m struggling with remembering all the physics formulas for my upcoming exam. Does anyone have effective techniques that worked for them? I\'ve tried flashcards but they don\'t seem to stick...',
-      author: 'Emily Watson',
-      timestamp: '2 hours ago',
-      likes: 24,
-      comments: 8,
-      subject: 'Physics',
-      isLiked: false
-    },
-    {
-      id: '2',
-      title: 'Study group for organic chemistry next week',
-      content: 'Planning to organize a study session for organic chemistry reaction mechanisms. We\'ll be covering SN1, SN2, E1, and E2 reactions. Drop a comment if you\'re interested!',
-      author: 'Michael Park',
-      timestamp: '4 hours ago',
-      likes: 15,
-      comments: 12,
-      subject: 'Chemistry',
-      isLiked: true
-    },
-    {
-      id: '3',
-      title: 'Anyone else finding linear algebra challenging?',
-      content: 'The concept of eigenvalues and eigenvectors is really confusing me. I understand the mathematical operations but struggle with the intuitive understanding. Any recommendations for visual resources?',
-      author: 'David Rodriguez',
-      timestamp: '6 hours ago',
-      likes: 31,
-      comments: 18,
-      subject: 'Mathematics',
-      isLiked: false
     }
   ];
 
@@ -180,16 +149,29 @@ const Dashboard = () => {
         </div>
       ) : (
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold">Study Feed</h2>
             <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
               Latest discussions
             </Badge>
           </div>
+          
           <div className="max-w-2xl mx-auto">
-            {feedPosts.map((post) => (
-              <FeedPost key={post.id} post={post} />
-            ))}
+            {user && <CreatePost />}
+            
+            {isLoading ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Loading posts...</p>
+              </div>
+            ) : posts && posts.length > 0 ? (
+              posts.map((post) => (
+                <FeedPost key={post.id} post={post} />
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No posts yet. Be the first to share something!</p>
+              </div>
+            )}
           </div>
         </div>
       )}
