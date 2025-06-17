@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -32,7 +33,7 @@ export const useComments = (postId: string) => {
           created_at,
           user_id,
           post_id,
-          profiles:user_id (
+          profiles (
             username,
             full_name,
             avatar_url
