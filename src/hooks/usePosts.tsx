@@ -45,7 +45,7 @@ export const usePosts = () => {
           comments_count,
           created_at,
           user_id,
-          profiles!inner(
+          profiles:user_id (
             username,
             full_name,
             avatar_url
