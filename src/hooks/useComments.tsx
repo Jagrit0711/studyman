@@ -28,8 +28,12 @@ export const useComments = (postId: string) => {
       const { data, error } = await supabase
         .from('comments')
         .select(`
-          *,
-          profiles:user_id (
+          id,
+          content,
+          created_at,
+          user_id,
+          post_id,
+          profiles!inner(
             username,
             full_name,
             avatar_url

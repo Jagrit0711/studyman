@@ -35,8 +35,17 @@ export const usePosts = () => {
       const { data, error } = await supabase
         .from('posts')
         .select(`
-          *,
-          profiles:user_id (
+          id,
+          title,
+          content,
+          subject,
+          media_urls,
+          media_types,
+          likes_count,
+          comments_count,
+          created_at,
+          user_id,
+          profiles!inner(
             username,
             full_name,
             avatar_url
