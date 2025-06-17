@@ -33,7 +33,7 @@ export const useComments = (postId: string) => {
           created_at,
           user_id,
           post_id,
-          profiles (
+          profiles!comments_user_id_fkey (
             username,
             full_name,
             avatar_url

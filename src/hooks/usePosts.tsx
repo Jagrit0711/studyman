@@ -45,7 +45,7 @@ export const usePosts = () => {
           comments_count,
           created_at,
           user_id,
-          profiles (
+          profiles!posts_user_id_fkey (
             username,
             full_name,
             avatar_url
