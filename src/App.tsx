@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
 import Landing from "./pages/Landing";
 import Index from "./pages/Index";
+import Feed from "./pages/Feed";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Settings from "./pages/Settings";
@@ -30,6 +31,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/dashboard" element={<Index />} />
+              <Route path="/feed" element={<Feed />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/settings" element={<Settings />} />
