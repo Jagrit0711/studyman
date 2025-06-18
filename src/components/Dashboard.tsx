@@ -1,180 +1,181 @@
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Video, TrendingUp, Users, BookOpen, Plus } from 'lucide-react';
+import { Clock, Calendar, Bell, TrendingUp, Heart, MessageCircle, BookOpen, Target } from 'lucide-react';
 import UpcomingSection from './dashboard/UpcomingSection';
 import CalendarSection from './dashboard/CalendarSection';
-import StudyRoomCard from './StudyRoomCard';
-import FeedPost from './FeedPost';
-import CreatePost from './CreatePost';
+import { useUserStats } from '@/hooks/useUserStats';
 import { usePosts } from '@/hooks/usePosts';
 import { useAuth } from '@/hooks/useAuth';
 
 const Dashboard = () => {
-  const [activeView, setActiveView] = useState('overview');
-  const { posts, isLoading } = usePosts();
+  const { stats, loading: statsLoading } = useUserStats();
+  const { posts } = usePosts();
   const { user } = useAuth();
 
-  const studyRooms = [
-    {
-      id: '1',
-      name: 'Advanced Calculus Study Group',
-      description: 'Working through differential equations and integration problems. All levels welcome!',
-      participants: 8,
-      maxParticipants: 12,
-      isActive: true,
-      isPrivate: false,
-      duration: '2h 30m',
-      subject: 'Mathematics',
-      host: 'Sarah Chen'
-    },
-    {
-      id: '2',
-      name: 'MCAT Prep Session',
-      description: 'Focused review of biochemistry and organic chemistry concepts.',
-      participants: 5,
-      maxParticipants: 8,
-      isActive: true,
-      isPrivate: true,
-      duration: '1h 45m',
-      subject: 'Medicine',
-      host: 'Dr. Johnson'
-    },
-    {
-      id: '3',
-      name: 'CS Algorithm Practice',
-      description: 'LeetCode problem solving and interview preparation.',
-      participants: 12,
-      maxParticipants: 15,
-      isActive: true,
-      isPrivate: false,
-      duration: '3h 15m',
-      subject: 'Computer Science',
-      host: 'Alex Kumar'
-    }
+  // Mock data for recent activity and notifications
+  const recentActivity = [
+    { type: 'study', subject: 'Mathematics', duration: '2h 30m', time: '2 hours ago' },
+    { type: 'exam', subject: 'Physics', name: 'Quantum Mechanics Final', date: 'Tomorrow' },
+    { type: 'assignment', subject: 'Chemistry', name: 'Lab Report', due: 'In 3 days' }
   ];
 
-  const stats = [
-    { label: 'Active Rooms', value: '24', icon: Video, color: 'text-blue-600' },
-    { label: 'Online Users', value: '156', icon: Users, color: 'text-green-600' },
-    { label: 'Study Sessions', value: '89', icon: BookOpen, color: 'text-purple-600' },
+  const notifications = [
+    { type: 'like', message: 'Sarah liked your post about calculus', time: '1h ago' },
+    { type: 'comment', message: 'Alex commented on your study tips', time: '3h ago' },
+    { type: 'share', message: 'Maya shared your physics notes', time: '5h ago' }
   ];
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'study': return <BookOpen className="w-4 h-4 text-blue-600" />;
+      case 'exam': return <Target className="w-4 h-4 text-red-600" />;
+      case 'assignment': return <Calendar className="w-4 h-4 text-purple-600" />;
+      default: return <Clock className="w-4 h-4 text-gray-600" />;
+    }
+  };
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'like': return <Heart className="w-4 h-4 text-red-500" />;
+      case 'comment': return <MessageCircle className="w-4 h-4 text-blue-500" />;
+      case 'share': return <TrendingUp className="w-4 h-4 text-green-500" />;
+      default: return <Bell className="w-4 h-4 text-gray-500" />;
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
-      {/* View Toggle */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-2">
-          <Button
-            variant={activeView === 'overview' ? 'default' : 'outline'}
-            onClick={() => setActiveView('overview')}
-            className="flex items-center space-x-2"
-          >
-            <TrendingUp className="w-4 h-4" />
-            <span>Overview</span>
-          </Button>
-          <Button
-            variant={activeView === 'rooms' ? 'default' : 'outline'}
-            onClick={() => setActiveView('rooms')}
-            className="flex items-center space-x-2"
-          >
-            <Video className="w-4 h-4" />
-            <span>Study Rooms</span>
-          </Button>
-          <Button
-            variant={activeView === 'feed' ? 'default' : 'outline'}
-            onClick={() => setActiveView('feed')}
-            className="flex items-center space-x-2"
-          >
-            <TrendingUp className="w-4 h-4" />
-            <span>Study Feed</span>
-          </Button>
-        </div>
+      {/* Dynamic Stats Section */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Study Overview</h2>
         
-        <Button size="sm" className="bg-primary hover:bg-primary/90">
-          <Plus className="w-4 h-4 mr-2" />
-          {activeView === 'rooms' ? 'Create Room' : activeView === 'feed' ? 'New Post' : 'Quick Action'}
-        </Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {/* Study Hours */}
+          <Card className="p-6 border-gray-200 hover:shadow-lg transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Study Hours Today</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {statsLoading ? '...' : `${Math.floor((stats?.study_hours || 0) / 60)}h`}
+                </p>
+                <p className="text-xs text-green-600 mt-1">+2.5h from yesterday</p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <Clock className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+          </Card>
+
+          {/* Study Sessions */}
+          <Card className="p-6 border-gray-200 hover:shadow-lg transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Sessions This Week</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {statsLoading ? '...' : stats?.sessions_led || 0}
+                </p>
+                <p className="text-xs text-purple-600 mt-1">+{stats?.sessions_led || 0} completed</p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                <BookOpen className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </Card>
+
+          {/* Upcoming Exams */}
+          <Card className="p-6 border-gray-200 hover:shadow-lg transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Upcoming Exams</p>
+                <p className="text-3xl font-bold text-gray-900">2</p>
+                <p className="text-xs text-orange-600 mt-1">Next: Tomorrow</p>
+              </div>
+              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                <Target className="w-6 h-6 text-orange-600" />
+              </div>
+            </div>
+          </Card>
+
+          {/* Post Interactions */}
+          <Card className="p-6 border-gray-200 hover:shadow-lg transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Post Interactions</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {posts?.reduce((acc, post) => acc + (post.likes_count || 0) + (post.comments_count || 0), 0) || 0}
+                </p>
+                <p className="text-xs text-green-600 mt-1">+12 this week</p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
 
-      {/* Content */}
-      {activeView === 'overview' ? (
-        <div>
-          {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            {stats.map((stat, index) => {
-              const Icon = stat.icon;
-              return (
-                <Card key={index} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">{stat.label}</p>
-                      <p className="text-2xl font-bold">{stat.value}</p>
-                    </div>
-                    <Icon className={`w-8 h-8 ${stat.color}`} />
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Recent Activity */}
+        <div className="lg:col-span-1">
+          <Card className="p-6 border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+              <Badge variant="outline" className="border-gray-300 text-gray-600">
+                Last 24h
+              </Badge>
+            </div>
+            <div className="space-y-4">
+              {recentActivity.map((activity, index) => (
+                <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                  {getActivityIcon(activity.type)}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">
+                      {activity.type === 'study' && `Studied ${activity.subject}`}
+                      {activity.type === 'exam' && `Exam: ${activity.name}`}
+                      {activity.type === 'assignment' && `Assignment: ${activity.name}`}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {activity.type === 'study' && `${activity.duration} • ${activity.time}`}
+                      {activity.type === 'exam' && `${activity.subject} • ${activity.date}`}
+                      {activity.type === 'assignment' && `${activity.subject} • Due ${activity.due}`}
+                    </p>
                   </div>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* Main Dashboard Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Column - Upcoming Section */}
-            <div className="space-y-6">
-              <UpcomingSection />
+                </div>
+              ))}
             </div>
+          </Card>
 
-            {/* Right Column - Calendar Section */}
-            <div className="space-y-6">
-              <CalendarSection />
+          {/* Notifications */}
+          <Card className="p-6 border-gray-200 mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+              <Badge variant="outline" className="border-gray-300 text-gray-600">
+                3 new
+              </Badge>
             </div>
-          </div>
+            <div className="space-y-3">
+              {notifications.map((notification, index) => (
+                <div key={index} className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                  {getNotificationIcon(notification.type)}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-900">{notification.message}</p>
+                    <p className="text-xs text-gray-500">{notification.time}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
-      ) : activeView === 'rooms' ? (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Active Study Rooms</h2>
-            <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-              {studyRooms.length} rooms active
-            </Badge>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {studyRooms.map((room) => (
-              <StudyRoomCard key={room.id} room={room} />
-            ))}
-          </div>
+
+        {/* Right Column - Upcoming and Calendar */}
+        <div className="lg:col-span-2 space-y-6">
+          <UpcomingSection />
+          <CalendarSection />
         </div>
-      ) : (
-        <div>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold">Study Feed</h2>
-            <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-              Latest discussions
-            </Badge>
-          </div>
-          
-          <div className="max-w-2xl mx-auto">
-            {user && <CreatePost />}
-            
-            {isLoading ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Loading posts...</p>
-              </div>
-            ) : posts && posts.length > 0 ? (
-              posts.map((post) => (
-                <FeedPost key={post.id} post={post} />
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No posts yet. Be the first to share something!</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 };

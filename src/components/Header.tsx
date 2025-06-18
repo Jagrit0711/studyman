@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Plus, Bell, User, Video, Users, MessageSquare, LogOut, Settings } from 'lucide-react';
+import { Search, Plus, Bell, User, Video, Users, MessageSquare, LogOut, Settings, Target } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import {
   DropdownMenu,
@@ -20,8 +20,9 @@ const Header = () => {
 
   const navItems = [
     { id: '/dashboard', label: 'Dashboard', icon: Users, path: '/dashboard' },
-    { id: '/dashboard', label: 'Study Rooms', icon: Video, path: '/dashboard' },
+    { id: '/study-rooms', label: 'Study Rooms', icon: Video, path: '/study-rooms' },
     { id: '/feed', label: 'Feed', icon: MessageSquare, path: '/feed' },
+    { id: '/focus', label: 'Focus', icon: Target, path: '/focus' },
     { id: '/settings', label: 'Settings', icon: Settings, path: '/settings' },
   ];
 
