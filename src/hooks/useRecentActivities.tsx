@@ -20,6 +20,10 @@ export const useRecentActivities = () => {
   const [activities, setActivities] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const isValidActivityType = (type: string): type is 'task_completed' | 'exam_attended' | 'meeting_attended' | 'focus_session' | 'assignment_submitted' => {
+    return ['task_completed', 'exam_attended', 'meeting_attended', 'focus_session', 'assignment_submitted'].includes(type);
+  };
+
   const fetchActivities = async () => {
     if (!user) {
       setLoading(false);
@@ -36,7 +40,12 @@ export const useRecentActivities = () => {
 
       if (error) throw error;
       
-      setActivities(data || []);
+      // Filter and type-cast the data to ensure type safety
+      const validActivities = (data || []).filter((activity): activity is RecentActivity => 
+        isValidActivityType(activity.activity_type)
+      );
+      
+      setActivities(validActivities);
     } catch (error) {
       console.error('Error fetching recent activities:', error);
       toast({
@@ -69,8 +78,14 @@ export const useRecentActivities = () => {
 
       if (error) throw error;
       
-      setActivities(prev => [data, ...prev.slice(0, 9)]);
-      return data;
+      // Type-cast the returned data
+      if (data && isValidActivityType(data.activity_type)) {
+        const typedActivity = data as RecentActivity;
+        setActivities(prev => [typedActivity, ...prev.slice(0, 9)]);
+        return typedActivity;
+      }
+      
+      return null;
     } catch (error) {
       console.error('Error adding activity:', error);
       toast({

@@ -24,6 +24,10 @@ export const useFocusSessions = () => {
   const [loading, setLoading] = useState(true);
   const [activeSession, setActiveSession] = useState<FocusSession | null>(null);
 
+  const isValidSessionType = (type: string): type is 'work' | 'shortBreak' | 'longBreak' => {
+    return ['work', 'shortBreak', 'longBreak'].includes(type);
+  };
+
   const fetchSessions = async () => {
     if (!user) {
       setLoading(false);
@@ -40,10 +44,15 @@ export const useFocusSessions = () => {
 
       if (error) throw error;
       
-      setSessions(data || []);
+      // Filter and type-cast the data to ensure type safety
+      const validSessions = (data || []).filter((session): session is FocusSession => 
+        isValidSessionType(session.session_type)
+      );
+      
+      setSessions(validSessions);
       
       // Check for active session (one that's started but not completed)
-      const active = (data || []).find(session => 
+      const active = validSessions.find(session => 
         session.completed_at === null
       );
       setActiveSession(active || null);
@@ -78,10 +87,15 @@ export const useFocusSessions = () => {
 
       if (error) throw error;
       
-      setActiveSession(data);
-      setSessions(prev => [data, ...prev]);
+      // Type-cast the returned data
+      if (data && isValidSessionType(data.session_type)) {
+        const typedSession = data as FocusSession;
+        setActiveSession(typedSession);
+        setSessions(prev => [typedSession, ...prev]);
+        return typedSession;
+      }
       
-      return data;
+      return null;
     } catch (error) {
       console.error('Error starting focus session:', error);
       toast({
@@ -107,19 +121,25 @@ export const useFocusSessions = () => {
 
       if (error) throw error;
       
-      setActiveSession(null);
-      setSessions(prev => 
-        prev.map(session => 
-          session.id === sessionId ? data : session
-        )
-      );
+      // Type-cast the returned data
+      if (data && isValidSessionType(data.session_type)) {
+        const typedSession = data as FocusSession;
+        setActiveSession(null);
+        setSessions(prev => 
+          prev.map(session => 
+            session.id === sessionId ? typedSession : session
+          )
+        );
+        
+        toast({
+          title: "Session Complete!",
+          description: "Your focus session has been recorded",
+        });
+        
+        return typedSession;
+      }
       
-      toast({
-        title: "Session Complete!",
-        description: "Your focus session has been recorded",
-      });
-      
-      return data;
+      return null;
     } catch (error) {
       console.error('Error completing focus session:', error);
       toast({
