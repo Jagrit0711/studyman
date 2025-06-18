@@ -4,25 +4,19 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Play, Pause, SkipForward, Volume2, Calendar, Clock, Target, Maximize, Settings } from 'lucide-react';
+import { Play, Pause, Maximize } from 'lucide-react';
 import Header from '@/components/Header';
-import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
-import { ComingSoonModal } from '@/components/ui/coming-soon-modal';
+import SpotifyPlayer from '@/components/focus/SpotifyPlayer';
+import CalendarScheduler from '@/components/focus/CalendarScheduler';
 import { useFocusSessions } from '@/hooks/useFocusSessions';
 
 const Focus = () => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState('No track selected');
   const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 minutes in seconds
   const [isActive, setIsActive] = useState(false);
   const [sessionType, setSessionType] = useState<'work' | 'shortBreak' | 'longBreak'>('work');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
-  const [showSpotifyModal, setShowSpotifyModal] = useState(false);
-  const [showCalendarModal, setShowCalendarModal] = useState(false);
   
-  const { isConnected, connectGoogleCalendar } = useGoogleCalendar();
   const { activeSession, startSession, completeSession, sessions } = useFocusSessions();
 
   const sessionTypes = {
@@ -219,81 +213,15 @@ const Focus = () => {
 
             {/* Side Panel */}
             <div className="space-y-6">
-              {/* Music Control */}
-              <Card className="p-6 border-gray-200">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Music</h3>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setShowSpotifyModal(true)}
-                    className="border-gray-300"
-                  >
-                    <Settings className="w-4 h-4" />
-                  </Button>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm font-medium text-gray-900">{currentTrack}</p>
-                    <p className="text-xs text-gray-500">Spotify</p>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <Button
-                      onClick={() => setIsPlaying(!isPlaying)}
-                      variant="outline"
-                      size="sm"
-                      className="border-gray-300"
-                    >
-                      {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    </Button>
-                    <Button variant="outline" size="sm" className="border-gray-300">
-                      <SkipForward className="w-4 h-4" />
-                    </Button>
-                    <Button variant="outline" size="sm" className="border-gray-300">
-                      <Volume2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </Card>
+              {/* Spotify Music Player */}
+              <SpotifyPlayer />
 
               {/* Calendar Integration */}
-              <Card className="p-6 border-gray-200">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Schedule</h3>
-                  <Badge variant={isConnected ? "default" : "outline"} className={isConnected ? "bg-green-100 text-green-800" : "border-gray-300"}>
-                    {isConnected ? "Connected" : "Not Connected"}
-                  </Badge>
-                </div>
-                
-                {!isConnected ? (
-                  <Button 
-                    onClick={connectGoogleCalendar}
-                    variant="outline" 
-                    className="w-full border-gray-300"
-                  >
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Connect Google Calendar
-                  </Button>
-                ) : (
-                  <div className="space-y-3">
-                    <Button 
-                      onClick={() => setShowCalendarModal(true)}
-                      variant="outline" 
-                      className="w-full border-gray-300"
-                    >
-                      <Target className="w-4 h-4 mr-2" />
-                      Schedule Focus Session
-                    </Button>
-                    
-                    <div className="text-sm text-gray-600">
-                      <p>Next: Team Meeting</p>
-                      <p className="text-xs text-gray-500">in 2 hours</p>
-                    </div>
-                  </div>
-                )}
-              </Card>
+              <CalendarScheduler 
+                taskTitle={taskTitle} 
+                sessionType={sessionType} 
+                duration={sessionTypes[sessionType].duration / 60} 
+              />
 
               {/* Stats */}
               <Card className="p-6 border-gray-200">
@@ -319,19 +247,6 @@ const Focus = () => {
           </div>
         </div>
       </div>
-
-      {/* Modals */}
-      <ComingSoonModal
-        isOpen={showSpotifyModal}
-        onClose={() => setShowSpotifyModal(false)}
-        feature="Spotify Integration"
-      />
-      
-      <ComingSoonModal
-        isOpen={showCalendarModal}
-        onClose={() => setShowCalendarModal(false)}
-        feature="Calendar Scheduling"
-      />
     </div>
   );
 };

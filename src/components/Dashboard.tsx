@@ -1,27 +1,21 @@
 
-import { useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Clock, Calendar, Bell, TrendingUp, Heart, MessageCircle, BookOpen, Target } from 'lucide-react';
+import { Clock, Target, TrendingUp, BookOpen } from 'lucide-react';
 import UpcomingSection from './dashboard/UpcomingSection';
 import CalendarSection from './dashboard/CalendarSection';
+import QuickActions from './dashboard/QuickActions';
 import { useUserStats } from '@/hooks/useUserStats';
 import { usePosts } from '@/hooks/usePosts';
 import { useAuth } from '@/hooks/useAuth';
 import { useRecentActivities } from '@/hooks/useRecentActivities';
+import { useFocusSessions } from '@/hooks/useFocusSessions';
 
 const Dashboard = () => {
   const { stats, loading: statsLoading } = useUserStats();
   const { posts } = usePosts();
   const { user } = useAuth();
   const { activities, loading: activitiesLoading } = useRecentActivities();
-
-  // Mock data for notifications (will be replaced with real data later)
-  const notifications = [
-    { type: 'like', message: 'Sarah liked your post about calculus', time: '1h ago' },
-    { type: 'comment', message: 'Alex commented on your study tips', time: '3h ago' },
-    { type: 'share', message: 'Maya shared your physics notes', time: '5h ago' }
-  ];
+  const { sessions } = useFocusSessions();
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -30,15 +24,6 @@ const Dashboard = () => {
       case 'exam_attended': return <Target className="w-4 h-4 text-red-600" />;
       case 'assignment_submitted': return <Calendar className="w-4 h-4 text-purple-600" />;
       default: return <Clock className="w-4 h-4 text-gray-600" />;
-    }
-  };
-
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'like': return <Heart className="w-4 h-4 text-red-500" />;
-      case 'comment': return <MessageCircle className="w-4 h-4 text-blue-500" />;
-      case 'share': return <TrendingUp className="w-4 h-4 text-green-500" />;
-      default: return <Bell className="w-4 h-4 text-gray-500" />;
     }
   };
 
@@ -58,6 +43,21 @@ const Dashboard = () => {
     }
   };
 
+  // Calculate today's stats from actual sessions
+  const todaysSessions = sessions.filter(session => {
+    const today = new Date().toDateString();
+    const sessionDate = new Date(session.created_at).toDateString();
+    return sessionDate === today;
+  });
+
+  const completedSessions = todaysSessions.filter(session => session.completed_at);
+  const todaysStudyTime = completedSessions
+    .filter(session => session.session_type === 'work')
+    .reduce((total, session) => total + session.duration_minutes, 0);
+
+  const todaysSessionsCount = completedSessions.length;
+  const totalPostInteractions = posts?.reduce((acc, post) => acc + (post.likes_count || 0) + (post.comments_count || 0), 0) || 0;
+
   return (
     <div className="container mx-auto px-4 py-6">
       {/* Dynamic Stats Section */}
@@ -71,9 +71,11 @@ const Dashboard = () => {
               <div>
                 <p className="text-sm text-gray-600 mb-1">Study Hours Today</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {statsLoading ? '...' : `${Math.floor((stats?.study_hours || 0) / 60)}h`}
+                  {Math.floor(todaysStudyTime / 60)}h {todaysStudyTime % 60}m
                 </p>
-                <p className="text-xs text-green-600 mt-1">+2.5h from yesterday</p>
+                <p className="text-xs text-green-600 mt-1">
+                  {todaysStudyTime > 0 ? `+${todaysStudyTime}m today` : 'Start your first session'}
+                </p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                 <Clock className="w-6 h-6 text-blue-600" />
@@ -85,11 +87,11 @@ const Dashboard = () => {
           <Card className="p-6 border-gray-200 hover:shadow-lg transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Sessions This Week</p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {statsLoading ? '...' : stats?.sessions_led || 0}
+                <p className="text-sm text-gray-600 mb-1">Sessions Today</p>
+                <p className="text-3xl font-bold text-gray-900">{todaysSessionsCount}</p>
+                <p className="text-xs text-purple-600 mt-1">
+                  {todaysSessionsCount > 0 ? `${todaysSessionsCount} completed` : 'No sessions yet'}
                 </p>
-                <p className="text-xs text-purple-600 mt-1">+{stats?.sessions_led || 0} completed</p>
               </div>
               <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
                 <BookOpen className="w-6 h-6 text-purple-600" />
@@ -97,13 +99,17 @@ const Dashboard = () => {
             </div>
           </Card>
 
-          {/* Upcoming Exams */}
+          {/* Total Sessions This Week */}
           <Card className="p-6 border-gray-200 hover:shadow-lg transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Upcoming Exams</p>
-                <p className="text-3xl font-bold text-gray-900">2</p>
-                <p className="text-xs text-orange-600 mt-1">Next: Tomorrow</p>
+                <p className="text-sm text-gray-600 mb-1">Sessions This Week</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {statsLoading ? '...' : sessions.length}
+                </p>
+                <p className="text-xs text-orange-600 mt-1">
+                  All focus sessions
+                </p>
               </div>
               <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
                 <Target className="w-6 h-6 text-orange-600" />
@@ -116,10 +122,10 @@ const Dashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Post Interactions</p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {posts?.reduce((acc, post) => acc + (post.likes_count || 0) + (post.comments_count || 0), 0) || 0}
+                <p className="text-3xl font-bold text-gray-900">{totalPostInteractions}</p>
+                <p className="text-xs text-green-600 mt-1">
+                  {totalPostInteractions > 0 ? 'Keep engaging!' : 'Share your knowledge'}
                 </p>
-                <p className="text-xs text-green-600 mt-1">+12 this week</p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                 <TrendingUp className="w-6 h-6 text-green-600" />
@@ -131,15 +137,14 @@ const Dashboard = () => {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Recent Activity */}
-        <div className="lg:col-span-1">
+        {/* Left Column - Calendar and Quick Actions */}
+        <div className="lg:col-span-1 space-y-6">
+          <CalendarSection />
+          <QuickActions />
+          
+          {/* Recent Activity */}
           <Card className="p-6 border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-              <Badge variant="outline" className="border-gray-300 text-gray-600">
-                Last 24h
-              </Badge>
-            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
             <div className="space-y-4">
               {activitiesLoading ? (
                 <div className="text-sm text-gray-500">Loading activities...</div>
@@ -162,33 +167,11 @@ const Dashboard = () => {
               )}
             </div>
           </Card>
-
-          {/* Notifications */}
-          <Card className="p-6 border-gray-200 mt-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
-              <Badge variant="outline" className="border-gray-300 text-gray-600">
-                3 new
-              </Badge>
-            </div>
-            <div className="space-y-3">
-              {notifications.map((notification, index) => (
-                <div key={index} className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors">
-                  {getNotificationIcon(notification.type)}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900">{notification.message}</p>
-                    <p className="text-xs text-gray-500">{notification.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
         </div>
 
-        {/* Right Column - Upcoming and Calendar */}
-        <div className="lg:col-span-2 space-y-6">
+        {/* Right Column - Upcoming */}
+        <div className="lg:col-span-2">
           <UpcomingSection />
-          <CalendarSection />
         </div>
       </div>
     </div>
