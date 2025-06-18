@@ -8,19 +8,15 @@ import CalendarSection from './dashboard/CalendarSection';
 import { useUserStats } from '@/hooks/useUserStats';
 import { usePosts } from '@/hooks/usePosts';
 import { useAuth } from '@/hooks/useAuth';
+import { useRecentActivities } from '@/hooks/useRecentActivities';
 
 const Dashboard = () => {
   const { stats, loading: statsLoading } = useUserStats();
   const { posts } = usePosts();
   const { user } = useAuth();
+  const { activities, loading: activitiesLoading } = useRecentActivities();
 
-  // Mock data for recent activity and notifications
-  const recentActivity = [
-    { type: 'study', subject: 'Mathematics', duration: '2h 30m', time: '2 hours ago' },
-    { type: 'exam', subject: 'Physics', name: 'Quantum Mechanics Final', date: 'Tomorrow' },
-    { type: 'assignment', subject: 'Chemistry', name: 'Lab Report', due: 'In 3 days' }
-  ];
-
+  // Mock data for notifications (will be replaced with real data later)
   const notifications = [
     { type: 'like', message: 'Sarah liked your post about calculus', time: '1h ago' },
     { type: 'comment', message: 'Alex commented on your study tips', time: '3h ago' },
@@ -29,9 +25,10 @@ const Dashboard = () => {
 
   const getActivityIcon = (type: string) => {
     switch (type) {
-      case 'study': return <BookOpen className="w-4 h-4 text-blue-600" />;
-      case 'exam': return <Target className="w-4 h-4 text-red-600" />;
-      case 'assignment': return <Calendar className="w-4 h-4 text-purple-600" />;
+      case 'focus_session': return <BookOpen className="w-4 h-4 text-blue-600" />;
+      case 'task_completed': return <Target className="w-4 h-4 text-green-600" />;
+      case 'exam_attended': return <Target className="w-4 h-4 text-red-600" />;
+      case 'assignment_submitted': return <Calendar className="w-4 h-4 text-purple-600" />;
       default: return <Clock className="w-4 h-4 text-gray-600" />;
     }
   };
@@ -42,6 +39,22 @@ const Dashboard = () => {
       case 'comment': return <MessageCircle className="w-4 h-4 text-blue-500" />;
       case 'share': return <TrendingUp className="w-4 h-4 text-green-500" />;
       default: return <Bell className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) {
+      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+      return `${diffInMinutes}m ago`;
+    } else if (diffInHours < 24) {
+      return `${diffInHours}h ago`;
+    } else {
+      const diffInDays = Math.floor(diffInHours / 24);
+      return `${diffInDays}d ago`;
     }
   };
 
@@ -128,23 +141,25 @@ const Dashboard = () => {
               </Badge>
             </div>
             <div className="space-y-4">
-              {recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                  {getActivityIcon(activity.type)}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">
-                      {activity.type === 'study' && `Studied ${activity.subject}`}
-                      {activity.type === 'exam' && `Exam: ${activity.name}`}
-                      {activity.type === 'assignment' && `Assignment: ${activity.name}`}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {activity.type === 'study' && `${activity.duration} • ${activity.time}`}
-                      {activity.type === 'exam' && `${activity.subject} • ${activity.date}`}
-                      {activity.type === 'assignment' && `${activity.subject} • Due ${activity.due}`}
-                    </p>
+              {activitiesLoading ? (
+                <div className="text-sm text-gray-500">Loading activities...</div>
+              ) : activities.length === 0 ? (
+                <div className="text-sm text-gray-500">No recent activities</div>
+              ) : (
+                activities.slice(0, 5).map((activity) => (
+                  <div key={activity.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                    {getActivityIcon(activity.activity_type)}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900">
+                        {activity.title}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {activity.description} • {formatTimeAgo(activity.created_at)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </Card>
 

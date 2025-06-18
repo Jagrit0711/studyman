@@ -105,6 +105,45 @@ export type Database = {
           },
         ]
       }
+      focus_sessions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          duration_minutes: number
+          google_calendar_event_id: string | null
+          id: string
+          session_type: string
+          started_at: string
+          task_title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          duration_minutes: number
+          google_calendar_event_id?: string | null
+          id?: string
+          session_type: string
+          started_at?: string
+          task_title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          duration_minutes?: number
+          google_calendar_event_id?: string | null
+          id?: string
+          session_type?: string
+          started_at?: string
+          task_title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       likes: {
         Row: {
           created_at: string
@@ -361,6 +400,36 @@ export type Database = {
           major?: string | null
           school_year?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_recent_activities: {
+        Row: {
+          activity_type: string
+          created_at: string
+          description: string | null
+          id: string
+          related_id: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          related_id?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          related_id?: string | null
+          title?: string
           user_id?: string
         }
         Relationships: []

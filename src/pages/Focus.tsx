@@ -9,19 +9,21 @@ import { Play, Pause, SkipForward, Volume2, Calendar, Clock, Target, Maximize, S
 import Header from '@/components/Header';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import { ComingSoonModal } from '@/components/ui/coming-soon-modal';
+import { useFocusSessions } from '@/hooks/useFocusSessions';
 
 const Focus = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState('No track selected');
   const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 minutes in seconds
   const [isActive, setIsActive] = useState(false);
-  const [sessionType, setSessionType] = useState('work'); // work, shortBreak, longBreak
+  const [sessionType, setSessionType] = useState<'work' | 'shortBreak' | 'longBreak'>('work');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
   const [showSpotifyModal, setShowSpotifyModal] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   
   const { isConnected, connectGoogleCalendar } = useGoogleCalendar();
+  const { activeSession, startSession, completeSession, sessions } = useFocusSessions();
 
   const sessionTypes = {
     work: { duration: 25 * 60, label: 'Focus Session', color: 'bg-red-500' },
@@ -36,28 +38,57 @@ const Focus = () => {
         setTimeLeft(time => time - 1);
       }, 1000);
     } else if (timeLeft === 0) {
-      setIsActive(false);
-      // Auto-switch session type
-      if (sessionType === 'work') {
-        setSessionType('shortBreak');
-        setTimeLeft(sessionTypes.shortBreak.duration);
-      } else {
-        setSessionType('work');
-        setTimeLeft(sessionTypes.work.duration);
-      }
+      handleSessionComplete();
     }
     return () => {
       if (interval) clearTimeout(interval);
     };
   }, [isActive, timeLeft, sessionType]);
 
-  const toggleTimer = () => {
-    setIsActive(!isActive);
+  const handleSessionComplete = async () => {
+    setIsActive(false);
+    
+    // Complete the active session in database if it exists
+    if (activeSession) {
+      await completeSession(activeSession.id);
+    }
+    
+    // Auto-switch session type
+    if (sessionType === 'work') {
+      setSessionType('shortBreak');
+      setTimeLeft(sessionTypes.shortBreak.duration);
+    } else {
+      setSessionType('work');
+      setTimeLeft(sessionTypes.work.duration);
+    }
   };
 
-  const resetTimer = () => {
+  const toggleTimer = async () => {
+    if (!isActive && !activeSession) {
+      // Starting a new session
+      const newSession = await startSession({
+        session_type: sessionType,
+        duration_minutes: sessionTypes[sessionType].duration / 60,
+        task_title: taskTitle || undefined
+      });
+      
+      if (newSession) {
+        setIsActive(true);
+      }
+    } else {
+      // Just toggle the timer (pause/resume)
+      setIsActive(!isActive);
+    }
+  };
+
+  const resetTimer = async () => {
     setIsActive(false);
-    setTimeLeft(sessionTypes[sessionType as keyof typeof sessionTypes].duration);
+    setTimeLeft(sessionTypes[sessionType].duration);
+    
+    // If there's an active session, complete it
+    if (activeSession) {
+      await completeSession(activeSession.id);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -82,8 +113,24 @@ const Focus = () => {
     longBreak: 'bg-gradient-to-br from-blue-50 to-indigo-50'
   };
 
+  // Calculate today's stats from sessions
+  const todaysSessions = sessions.filter(session => {
+    const today = new Date().toDateString();
+    const sessionDate = new Date(session.created_at).toDateString();
+    return sessionDate === today;
+  });
+
+  const completedSessions = todaysSessions.filter(session => session.completed_at);
+  const todaysStudyTime = completedSessions
+    .filter(session => session.session_type === 'work')
+    .reduce((total, session) => total + session.duration_minutes, 0);
+
+  const todaysBreaks = completedSessions.filter(session => 
+    session.session_type === 'shortBreak' || session.session_type === 'longBreak'
+  ).length;
+
   return (
-    <div className={`min-h-screen transition-all duration-500 ${backgroundGradients[sessionType as keyof typeof backgroundGradients]}`}>
+    <div className={`min-h-screen transition-all duration-500 ${backgroundGradients[sessionType]}`}>
       {!isFullscreen && <Header />}
       
       <div className="container mx-auto px-4 py-8">
@@ -107,9 +154,10 @@ const Focus = () => {
               <Card className="p-8 text-center border-gray-200 shadow-lg">
                 <div className="mb-6">
                   <Badge 
-                    className={`${sessionTypes[sessionType as keyof typeof sessionTypes].color} text-white text-sm px-4 py-1`}
+                    className={`${sessionTypes[sessionType].color} text-white text-sm px-4 py-1`}
                   >
-                    {sessionTypes[sessionType as keyof typeof sessionTypes].label}
+                    {sessionTypes[sessionType].label}
+                    {activeSession && ' (Active)'}
                   </Badge>
                 </div>
                 
@@ -125,7 +173,7 @@ const Focus = () => {
                     <Button
                       onClick={toggleTimer}
                       size="lg"
-                      className={`${sessionTypes[sessionType as keyof typeof sessionTypes].color} hover:opacity-90 text-white px-8 py-3`}
+                      className={`${sessionTypes[sessionType].color} hover:opacity-90 text-white px-8 py-3`}
                     >
                       {isActive ? <Pause className="w-6 h-6 mr-2" /> : <Play className="w-6 h-6 mr-2" />}
                       {isActive ? 'Pause' : 'Start'}
@@ -143,10 +191,12 @@ const Focus = () => {
                       key={key}
                       variant={sessionType === key ? 'default' : 'outline'}
                       onClick={() => {
-                        setSessionType(key);
-                        setTimeLeft(type.duration);
-                        setIsActive(false);
+                        if (!isActive && !activeSession) {
+                          setSessionType(key as 'work' | 'shortBreak' | 'longBreak');
+                          setTimeLeft(type.duration);
+                        }
                       }}
+                      disabled={isActive || !!activeSession}
                       className={sessionType === key ? `${type.color} text-white` : 'border-gray-300'}
                     >
                       {type.label}
@@ -160,6 +210,7 @@ const Focus = () => {
                     placeholder="What are you working on?"
                     value={taskTitle}
                     onChange={(e) => setTaskTitle(e.target.value)}
+                    disabled={isActive || !!activeSession}
                     className="text-center text-lg border-gray-300 focus:border-gray-500"
                   />
                 </div>
@@ -250,15 +301,17 @@ const Focus = () => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Focus Sessions</span>
-                    <span className="text-sm font-medium text-gray-900">4/8</span>
+                    <span className="text-sm font-medium text-gray-900">{completedSessions.length}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Study Time</span>
-                    <span className="text-sm font-medium text-gray-900">2h 15m</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {Math.floor(todaysStudyTime / 60)}h {todaysStudyTime % 60}m
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Breaks Taken</span>
-                    <span className="text-sm font-medium text-gray-900">3</span>
+                    <span className="text-sm font-medium text-gray-900">{todaysBreaks}</span>
                   </div>
                 </div>
               </Card>
