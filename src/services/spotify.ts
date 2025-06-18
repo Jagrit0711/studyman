@@ -5,6 +5,9 @@ interface SpotifyTrack {
   artists: { name: string }[];
   preview_url: string | null;
   external_urls: { spotify: string };
+  album?: {
+    images: { url: string }[];
+  };
 }
 
 interface SpotifyPlaylist {
@@ -91,7 +94,7 @@ class SpotifyService {
     const token = this.getAccessToken();
     if (!token) throw new Error('Not authenticated');
 
-    const response = await fetch('https://api.spotify.com/v1/me/playlists?limit=20', {
+    const response = await fetch('https://api.spotify.com/v1/me/playlists?limit=50', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -130,6 +133,81 @@ class SpotifyService {
     if (!response.ok) throw new Error('Failed to search tracks');
     const data = await response.json();
     return data.tracks.items || [];
+  }
+
+  // Web Playback SDK methods (requires Spotify Premium)
+  async playTrack(trackUri: string, deviceId?: string): Promise<void> {
+    const token = this.getAccessToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const body: any = {
+      uris: [trackUri]
+    };
+
+    if (deviceId) {
+      body.device_id = deviceId;
+    }
+
+    const response = await fetch('https://api.spotify.com/v1/me/player/play', {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok && response.status !== 204) {
+      throw new Error('Failed to play track');
+    }
+  }
+
+  async pausePlayback(): Promise<void> {
+    const token = this.getAccessToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch('https://api.spotify.com/v1/me/player/pause', {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok && response.status !== 204) {
+      throw new Error('Failed to pause playback');
+    }
+  }
+
+  async resumePlayback(): Promise<void> {
+    const token = this.getAccessToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch('https://api.spotify.com/v1/me/player/play', {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok && response.status !== 204) {
+      throw new Error('Failed to resume playback');
+    }
+  }
+
+  async setVolume(volume: number): Promise<void> {
+    const token = this.getAccessToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch(`https://api.spotify.com/v1/me/player/volume?volume_percent=${volume}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok && response.status !== 204) {
+      throw new Error('Failed to set volume');
+    }
   }
 
   signOut() {

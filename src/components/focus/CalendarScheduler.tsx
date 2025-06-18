@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -29,15 +29,63 @@ const CalendarScheduler = ({ taskTitle, sessionType, duration }: CalendarSchedul
   const [linkToExisting, setLinkToExisting] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState('');
 
-  // Get today's and tomorrow's events
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  
+  // Fetch events when dialog opens and when connected
+  useEffect(() => {
+    if (isConnected && showScheduler) {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7); // Get events from last week
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 30); // Get events for next month
+      fetchEvents(startDate, endDate);
+    }
+  }, [isConnected, showScheduler, fetchEvents]);
+
+  const getEventTypeFromTitle = (eventTitle: string): string => {
+    const lowerTitle = eventTitle.toLowerCase();
+    if (lowerTitle.includes('test') || lowerTitle.includes('exam') || lowerTitle.includes('quiz')) {
+      return 'exam preparation';
+    } else if (lowerTitle.includes('meeting') || lowerTitle.includes('interview')) {
+      return 'meeting preparation';
+    } else if (lowerTitle.includes('presentation') || lowerTitle.includes('demo')) {
+      return 'presentation prep';
+    } else if (lowerTitle.includes('assignment') || lowerTitle.includes('project')) {
+      return 'assignment work';
+    } else if (lowerTitle.includes('class') || lowerTitle.includes('lecture')) {
+      return 'study session';
+    } else {
+      return 'preparation';
+    }
+  };
+
+  const formatEventDateTime = (dateTimeString: string) => {
+    const date = new Date(dateTimeString);
+    const now = new Date();
+    const diffInHours = Math.floor((date.getTime() - now.getTime()) / (1000 *60 * 60));
+    
+    const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateStr = date.toLocaleDateString();
+    
+    if (diffInHours < 0) {
+      return `${dateStr} at ${timeStr} (Past)`;
+    } else if (diffInHours < 24) {
+      return `Today at ${timeStr}`;
+    } else if (diffInHours < 48) {
+      return `Tomorrow at ${timeStr}`;
+    } else {
+      return `${dateStr} at ${timeStr}`;
+    }
+  };
+
+  // Get all events (past and future) for linking
+  const allEvents = events.sort((a, b) => 
+    new Date(a.start.dateTime).getTime() - new Date(b.start.dateTime).getTime()
+  );
+
   const upcomingEvents = events.filter(event => {
     const eventDate = new Date(event.start.dateTime);
-    return eventDate >= today;
-  }).slice(0, 5);
+    const now = new Date();
+    return eventDate >= now;
+  }).slice(0, 3);
 
   const scheduleNewSession = async () => {
     if (!scheduledDate || !scheduledTime || !eventTitle) return;
@@ -85,29 +133,39 @@ const CalendarScheduler = ({ taskTitle, sessionType, duration }: CalendarSchedul
     if (!selectedEvent) return;
 
     try {
-      const event = events.find(e => e.id === selectedEvent);
+      const event = allEvents.find(e => e.id === selectedEvent);
       if (!event) return;
 
-      // Update the existing event to include focus session info
-      await createEvent({
-        summary: `${event.summary} (Focus Session)`,
-        description: `${event.description || ''}\n\nFocus Session: ${sessionType} for ${duration} minutes`,
-        start: event.start,
-        end: event.end,
+      const eventDate = new Date(event.start.dateTime);
+      const prepTime = new Date(eventDate.getTime() - (duration * 60 * 1000)); // Schedule before the event
+      const eventType = getEventTypeFromTitle(event.summary);
+      
+      // Create a preparation session before the original event
+      const prepEvent = await createEvent({
+        summary: `${eventType.charAt(0).toUpperCase() + eventType.slice(1)} - ${event.summary}`,
+        description: `Focus session for ${eventType} (${duration} min prep for: ${event.summary})`,
+        start: {
+          dateTime: prepTime.toISOString(),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+        end: {
+          dateTime: eventDate.toISOString(),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
       });
 
       // Create focus session
       await startSession({
         session_type: sessionType,
         duration_minutes: duration,
-        task_title: event.summary,
+        task_title: `${eventType} - ${event.summary}`,
       });
 
       // Add activity
       await addActivity({
         activity_type: 'focus_session',
-        title: `Linked Focus Session to: ${event.summary}`,
-        description: `Linked ${sessionType} session to existing calendar event`,
+        title: `Prep Session Scheduled: ${event.summary}`,
+        description: `Created ${eventType} session before ${event.summary}`,
       });
 
       setShowScheduler(false);
@@ -123,18 +181,6 @@ const CalendarScheduler = ({ taskTitle, sessionType, duration }: CalendarSchedul
     setEventTitle(taskTitle || '');
     setLinkToExisting(false);
     setSelectedEvent('');
-  };
-
-  const formatEventTime = (dateTimeString: string) => {
-    const date = new Date(dateTimeString);
-    const now = new Date();
-    const diffInHours = Math.floor((date.getTime() - now.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 24) {
-      return `in ${diffInHours}h`;
-    } else {
-      return date.toLocaleDateString();
-    }
   };
 
   if (!isConnected) {
@@ -163,7 +209,7 @@ const CalendarScheduler = ({ taskTitle, sessionType, duration }: CalendarSchedul
     <Card className="p-6 border-gray-200">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900">Schedule</h3>
-        <Badge className="bg-green-100 text-green-800">Connected</Badge>
+        <Badge className="bg-blue-100 text-blue-800">Calendar Ready</Badge>
       </div>
       
       <div className="space-y-3">
@@ -174,7 +220,7 @@ const CalendarScheduler = ({ taskTitle, sessionType, duration }: CalendarSchedul
               Schedule Focus Session
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-white max-w-md">
+          <DialogContent className="bg-white max-w-lg max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Schedule Focus Session</DialogTitle>
             </DialogHeader>
@@ -238,24 +284,37 @@ const CalendarScheduler = ({ taskTitle, sessionType, duration }: CalendarSchedul
               ) : (
                 <div className="space-y-3">
                   <div>
-                    <Label htmlFor="existing-event">Choose Event</Label>
+                    <Label htmlFor="existing-event">Choose Event to Prepare For</Label>
                     <select
                       id="existing-event"
                       value={selectedEvent}
                       onChange={(e) => setSelectedEvent(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded"
+                      className="w-full p-2 border border-gray-300 rounded max-h-32 overflow-y-auto"
+                      size={Math.min(allEvents.length + 1, 6)}
                     >
                       <option value="">Select an event</option>
-                      {upcomingEvents.map((event) => (
+                      {allEvents.map((event) => (
                         <option key={event.id} value={event.id}>
-                          {event.summary} - {formatEventTime(event.start.dateTime)}
+                          {event.summary} - {formatEventDateTime(event.start.dateTime)}
                         </option>
                       ))}
                     </select>
                   </div>
                   
-                  <Button onClick={linkToExistingEvent} className="w-full">
-                    Link to Event
+                  {selectedEvent && (
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                      <p className="text-sm text-blue-700">
+                        This will create a {duration}-minute preparation session before your selected event.
+                      </p>
+                    </div>
+                  )}
+                  
+                  <Button 
+                    onClick={linkToExistingEvent} 
+                    className="w-full"
+                    disabled={!selectedEvent}
+                  >
+                    Create Prep Session
                   </Button>
                 </div>
               )}
@@ -264,11 +323,16 @@ const CalendarScheduler = ({ taskTitle, sessionType, duration }: CalendarSchedul
         </Dialog>
         
         {upcomingEvents.length > 0 && (
-          <div className="text-sm text-gray-600">
-            <p className="font-medium">Next: {upcomingEvents[0].summary}</p>
-            <p className="text-xs text-gray-500">
-              {formatEventTime(upcomingEvents[0].start.dateTime)}
-            </p>
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-gray-700">Next Events:</h4>
+            {upcomingEvents.map((event) => (
+              <div key={event.id} className="text-sm text-gray-600 p-2 bg-gray-50 rounded">
+                <p className="font-medium">{event.summary}</p>
+                <p className="text-xs text-gray-500">
+                  {formatEventDateTime(event.start.dateTime)}
+                </p>
+              </div>
+            ))}
           </div>
         )}
       </div>
