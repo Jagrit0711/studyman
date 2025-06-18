@@ -1,6 +1,6 @@
 
 import { Card } from '@/components/ui/card';
-import { Clock, Target, TrendingUp, BookOpen } from 'lucide-react';
+import { Clock, Target, TrendingUp, BookOpen, Calendar } from 'lucide-react';
 import UpcomingSection from './dashboard/UpcomingSection';
 import CalendarSection from './dashboard/CalendarSection';
 import QuickActions from './dashboard/QuickActions';
