@@ -59,17 +59,15 @@ const Dashboard = () => {
   const totalPostInteractions = posts?.reduce((acc, post) => acc + (post.likes_count || 0) + (post.comments_count || 0), 0) || 0;
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      {/* Quick Actions at the top */}
-      <div className="mb-8">
-        <QuickActions />
-      </div>
+    <div className="container mx-auto px-4 py-6 space-y-6">
+      {/* Quick Actions at the top - smaller card */}
+      <QuickActions />
 
-      {/* Dynamic Stats Section */}
-      <div className="mb-8">
+      {/* Study Overview Stats */}
+      <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Study Overview</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Study Hours */}
           <Card className="p-6 border-gray-200 hover:shadow-lg transition-all duration-300">
             <div className="flex items-center justify-between">
@@ -144,9 +142,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Calendar and Recent Activity */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="h-full">
-            <CalendarSection />
-          </div>
+          <CalendarSection />
           
           {/* Recent Activity */}
           <Card className="p-6 border-gray-200">

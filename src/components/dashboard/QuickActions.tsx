@@ -3,16 +3,19 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Plus, Target, Calendar, BookOpen, Users, Video } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { ComingSoonModal } from '@/components/ui/coming-soon-modal';
+import { useState } from 'react';
 
 const QuickActions = () => {
   const navigate = useNavigate();
+  const [showComingSoon, setShowComingSoon] = useState(false);
 
   const actions = [
     {
       id: 'video-call',
-      label: 'Start Video Call',
+      label: 'Start Video Call (Coming Soon)',
       icon: Video,
-      onClick: () => {}, // This would open video call modal
+      onClick: () => setShowComingSoon(true),
       color: 'bg-gray-900',
       featured: true,
     },
@@ -54,40 +57,48 @@ const QuickActions = () => {
   const regularActions = actions.filter(action => !action.featured);
 
   return (
-    <Card className="p-6 border-gray-200">
-      <h2 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h2>
-      
-      <div className="space-y-4">
-        {/* Featured Action */}
-        {featuredAction && (
-          <Button
-            onClick={featuredAction.onClick}
-            className={`w-full h-16 ${featuredAction.color} hover:opacity-90 text-white text-lg font-semibold`}
-          >
-            <featuredAction.icon className="w-6 h-6 mr-3" />
-            {featuredAction.label}
-          </Button>
-        )}
+    <>
+      <Card className="p-4 border-gray-200">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
         
-        {/* Regular Actions */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {regularActions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <Button
-                key={action.id}
-                onClick={action.onClick}
-                variant="outline"
-                className="h-20 flex-col space-y-2 border-gray-200 hover:bg-gray-50"
-              >
-                <Icon className="w-6 h-6 text-gray-600" />
-                <span className="text-xs text-center text-gray-700">{action.label}</span>
-              </Button>
-            );
-          })}
+        <div className="space-y-3">
+          {/* Featured Action */}
+          {featuredAction && (
+            <Button
+              onClick={featuredAction.onClick}
+              className={`w-full h-12 ${featuredAction.color} hover:opacity-90 text-white text-sm font-medium`}
+            >
+              <featuredAction.icon className="w-5 h-5 mr-2" />
+              {featuredAction.label}
+            </Button>
+          )}
+          
+          {/* Regular Actions */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            {regularActions.map((action) => {
+              const Icon = action.icon;
+              return (
+                <Button
+                  key={action.id}
+                  onClick={action.onClick}
+                  variant="outline"
+                  className="h-16 flex-col space-y-1 border-gray-200 hover:bg-gray-50"
+                >
+                  <Icon className="w-5 h-5 text-gray-600" />
+                  <span className="text-xs text-center text-gray-700">{action.label}</span>
+                </Button>
+              );
+            })}
+          </div>
         </div>
-      </div>
-    </Card>
+      </Card>
+
+      <ComingSoonModal
+        isOpen={showComingSoon}
+        onClose={() => setShowComingSoon(false)}
+        feature="Video Call"
+      />
+    </>
   );
 };
 
