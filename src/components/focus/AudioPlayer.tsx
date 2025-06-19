@@ -91,7 +91,7 @@ const AudioPlayer = ({ track, isPlaying, onTogglePlay, volume, onVolumeChange }:
     return (
       <div className="p-4 bg-orange-50 rounded-lg text-center">
         <p className="text-sm text-orange-600">Preview not available for this track</p>
-        <p className="text-xs text-gray-500 mt-1">Spotify Premium required for full playback</p>
+        <p className="text-xs text-gray-500 mt-1">Try selecting a different song</p>
       </div>
     );
   }
@@ -124,6 +124,7 @@ const AudioPlayer = ({ track, isPlaying, onTogglePlay, volume, onVolumeChange }:
           <p className="text-xs text-gray-500 truncate">
             {track.artists.map(a => a.name).join(', ')}
           </p>
+          <p className="text-xs text-blue-500">30-second preview</p>
         </div>
         <Button
           onClick={onTogglePlay}
