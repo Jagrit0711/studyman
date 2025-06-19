@@ -31,34 +31,51 @@ const SpotifyPlayer = () => {
   const [volume, setVolume] = useState(50);
   const [isShuffled, setIsShuffled] = useState(false);
   const [isRepeating, setIsRepeating] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   const handleSearch = async () => {
     if (searchQuery.trim()) {
-      const results = await searchTracks(searchQuery);
-      // Filter results to prioritize tracks with preview URLs
-      const tracksWithPreview = results.filter(track => track.preview_url);
-      const tracksWithoutPreview = results.filter(track => !track.preview_url);
-      setSearchResults([...tracksWithPreview, ...tracksWithoutPreview]);
+      setSearchLoading(true);
+      try {
+        const results = await searchTracks(searchQuery);
+        console.log('Search results:', results);
+        
+        // Prioritize tracks with preview URLs but show all results
+        const tracksWithPreview = results.filter(track => track.preview_url);
+        const tracksWithoutPreview = results.filter(track => !track.preview_url);
+        setSearchResults([...tracksWithPreview, ...tracksWithoutPreview]);
+      } catch (error) {
+        console.error('Search failed:', error);
+      } finally {
+        setSearchLoading(false);
+      }
     }
   };
 
   const playPlaylist = async (playlistId: string) => {
     try {
-      const tracks = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+      const token = localStorage.getItem('spotify_access_token');
+      const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('spotify_access_token')}`
+          'Authorization': `Bearer ${token}`
         }
-      }).then(res => res.json());
+      });
       
-      if (tracks.items && tracks.items.length > 0) {
-        const playlistTracks = tracks.items.map((item: any) => item.track).filter(Boolean);
-        // Prioritize tracks with preview URLs
-        const tracksWithPreview = playlistTracks.filter(track => track.preview_url);
-        const finalTracks = tracksWithPreview.length > 0 ? tracksWithPreview : playlistTracks;
-        
-        setCurrentPlaylist(finalTracks);
-        setCurrentTrackIndex(0);
-        playTrack(finalTracks[0]);
+      if (response.ok) {
+        const tracks = await response.json();
+        if (tracks.items && tracks.items.length > 0) {
+          const playlistTracks = tracks.items.map((item: any) => item.track).filter(Boolean);
+          console.log('Playlist tracks:', playlistTracks);
+          
+          // Find the first track with a preview URL
+          const trackWithPreview = playlistTracks.find(track => track.preview_url);
+          const startingTrack = trackWithPreview || playlistTracks[0];
+          
+          setCurrentPlaylist(playlistTracks);
+          const startIndex = playlistTracks.findIndex(track => track.id === startingTrack.id);
+          setCurrentTrackIndex(startIndex);
+          playTrack(startingTrack);
+        }
       }
     } catch (error) {
       console.error('Failed to play playlist:', error);
@@ -231,7 +248,7 @@ const SpotifyPlayer = () => {
           </DialogTrigger>
           <DialogContent className="bg-white max-w-2xl max-h-[80vh] overflow-hidden rounded-xl">
             <DialogHeader>
-              <DialogTitle>Search Music & Playlists</DialogTitle>
+              <DialogTitle className="text-gray-900">Search Music & Playlists</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 overflow-y-auto max-h-[60vh]">
               <div className="flex space-x-2">
@@ -240,13 +257,18 @@ const SpotifyPlayer = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  className="flex-1 rounded-lg"
+                  className="flex-1 rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500"
                 />
                 <Button 
                   onClick={handleSearch}
-                  className="bg-green-600 hover:bg-green-700 text-white rounded-lg"
+                  disabled={searchLoading}
+                  className="bg-green-600 hover:bg-green-700 text-white rounded-lg px-4"
                 >
-                  <Search className="w-4 h-4" />
+                  {searchLoading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <Search className="w-4 h-4" />
+                  )}
                 </Button>
               </div>
               
@@ -254,83 +276,89 @@ const SpotifyPlayer = () => {
               {searchResults.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-gray-900">Search Results</h4>
-                  {searchResults.map((track) => (
-                    <div
-                      key={track.id}
-                      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all duration-200 ${
-                        track.preview_url 
-                          ? 'bg-green-50 hover:bg-green-100 border border-green-200' 
-                          : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
-                      }`}
-                      onClick={() => {
-                        playTrack(track);
-                        setCurrentPlaylist([track]);
-                        setCurrentTrackIndex(0);
-                        setShowSearch(false);
-                      }}
-                    >
-                      <div className="flex items-center space-x-3">
-                        {track.album?.images?.[0]?.url && (
-                          <img 
-                            src={track.album.images[0].url} 
-                            alt="Album cover"
-                            className="w-12 h-12 rounded-lg object-cover shadow-sm"
-                          />
-                        )}
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{track.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {track.artists.map((a: any) => a.name).join(', ')}
-                          </p>
-                          {track.preview_url ? (
-                            <div className="flex items-center mt-1">
-                              <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
-                              <span className="text-xs text-green-600 font-medium">Preview Available</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center mt-1">
-                              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
-                              <span className="text-xs text-gray-500">No Preview</span>
-                            </div>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {searchResults.map((track) => (
+                      <div
+                        key={track.id}
+                        className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all duration-200 border ${
+                          track.preview_url 
+                            ? 'bg-green-50 hover:bg-green-100 border-green-200 hover:border-green-300' 
+                            : 'bg-gray-50 hover:bg-gray-100 border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => {
+                          console.log('Selected track:', track);
+                          playTrack(track);
+                          setCurrentPlaylist([track]);
+                          setCurrentTrackIndex(0);
+                          setShowSearch(false);
+                        }}
+                      >
+                        <div className="flex items-center space-x-3">
+                          {track.album?.images?.[0]?.url && (
+                            <img 
+                              src={track.album.images[0].url} 
+                              alt="Album cover"
+                              className="w-12 h-12 rounded-lg object-cover shadow-sm"
+                            />
                           )}
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{track.name}</p>
+                            <p className="text-xs text-gray-600">
+                              {track.artists.map((a: any) => a.name).join(', ')}
+                            </p>
+                            {track.preview_url ? (
+                              <div className="flex items-center mt-1">
+                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
+                                <span className="text-xs text-green-700 font-medium">Preview Available</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center mt-1">
+                                <div className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></div>
+                                <span className="text-xs text-gray-500">No Preview</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
 
               {/* Playlists */}
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-gray-900">Your Playlists</h4>
-                {playlists.slice(0, 10).map((playlist) => (
-                  <div
-                    key={playlist.id}
-                    className="flex items-center justify-between p-3 bg-blue-50 hover:bg-blue-100 rounded-lg cursor-pointer border border-blue-200 transition-all duration-200"
-                    onClick={() => {
-                      playPlaylist(playlist.id);
-                      setShowSearch(false);
-                    }}
-                  >
-                    <div className="flex items-center space-x-3">
-                      {playlist.images?.[0]?.url ? (
-                        <img 
-                          src={playlist.images[0].url} 
-                          alt="Playlist cover"
-                          className="w-12 h-12 rounded-lg object-cover shadow-sm"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-200 to-blue-300 rounded-lg flex items-center justify-center">
-                          <Music className="w-6 h-6 text-blue-600" />
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {playlists.slice(0, 10).map((playlist) => (
+                    <div
+                      key={playlist.id}
+                      className="flex items-center justify-between p-3 bg-blue-50 hover:bg-blue-100 rounded-lg cursor-pointer border border-blue-200 hover:border-blue-300 transition-all duration-200"
+                      onClick={() => {
+                        console.log('Selected playlist:', playlist);
+                        playPlaylist(playlist.id);
+                        setShowSearch(false);
+                      }}
+                    >
+                      <div className="flex items-center space-x-3">
+                        {playlist.images?.[0]?.url ? (
+                          <img 
+                            src={playlist.images[0].url} 
+                            alt="Playlist cover"
+                            className="w-12 h-12 rounded-lg object-cover shadow-sm"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-200 to-blue-300 rounded-lg flex items-center justify-center">
+                            <Music className="w-6 h-6 text-blue-600" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{playlist.name}</p>
+                          <p className="text-xs text-gray-600">{playlist.tracks.total} tracks</p>
                         </div>
-                      )}
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{playlist.name}</p>
-                        <p className="text-xs text-gray-500">{playlist.tracks.total} tracks</p>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </DialogContent>
