@@ -40,7 +40,7 @@ const SpotifyPlayer = () => {
         const results = await searchTracks(searchQuery);
         console.log('Search results:', results);
         
-        // Prioritize tracks with preview URLs but show all results
+        // Show all results but prioritize tracks with preview URLs
         const tracksWithPreview = results.filter(track => track.preview_url);
         const tracksWithoutPreview = results.filter(track => !track.preview_url);
         setSearchResults([...tracksWithPreview, ...tracksWithoutPreview]);
@@ -52,10 +52,18 @@ const SpotifyPlayer = () => {
     }
   };
 
+  const handleTrackSelect = (track: any) => {
+    console.log('Selecting track:', track.name, 'Preview URL:', track.preview_url);
+    playTrack(track);
+    setCurrentPlaylist([track]);
+    setCurrentTrackIndex(0);
+    setShowSearch(false);
+  };
+
   const playPlaylist = async (playlistId: string) => {
     try {
       const token = localStorage.getItem('spotify_access_token');
-      const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+      const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -84,9 +92,13 @@ const SpotifyPlayer = () => {
 
   const skipForward = () => {
     if (currentPlaylist.length > 0) {
-      const nextIndex = isShuffled 
-        ? Math.floor(Math.random() * currentPlaylist.length)
-        : (currentTrackIndex + 1) % currentPlaylist.length;
+      let nextIndex;
+      if (isShuffled) {
+        nextIndex = Math.floor(Math.random() * currentPlaylist.length);
+      } else {
+        nextIndex = (currentTrackIndex + 1) % currentPlaylist.length;
+      }
+      
       setCurrentTrackIndex(nextIndex);
       playTrack(currentPlaylist[nextIndex]);
     }
@@ -94,9 +106,13 @@ const SpotifyPlayer = () => {
 
   const skipBackward = () => {
     if (currentPlaylist.length > 0) {
-      const prevIndex = isShuffled 
-        ? Math.floor(Math.random() * currentPlaylist.length)
-        : currentTrackIndex === 0 ? currentPlaylist.length - 1 : currentTrackIndex - 1;
+      let prevIndex;
+      if (isShuffled) {
+        prevIndex = Math.floor(Math.random() * currentPlaylist.length);
+      } else {
+        prevIndex = currentTrackIndex === 0 ? currentPlaylist.length - 1 : currentTrackIndex - 1;
+      }
+      
       setCurrentTrackIndex(prevIndex);
       playTrack(currentPlaylist[prevIndex]);
     }
@@ -253,7 +269,7 @@ const SpotifyPlayer = () => {
             <div className="space-y-4 overflow-y-auto max-h-[60vh]">
               <div className="flex space-x-2">
                 <Input
-                  placeholder="Search for songs with previews..."
+                  placeholder="Search for songs..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -283,15 +299,9 @@ const SpotifyPlayer = () => {
                         className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all duration-200 border ${
                           track.preview_url 
                             ? 'bg-green-50 hover:bg-green-100 border-green-200 hover:border-green-300' 
-                            : 'bg-gray-50 hover:bg-gray-100 border-gray-200 hover:border-gray-300'
+                            : 'bg-gray-50 hover:bg-gray-100 border-gray-200 hover:border-gray-300 opacity-60'
                         }`}
-                        onClick={() => {
-                          console.log('Selected track:', track);
-                          playTrack(track);
-                          setCurrentPlaylist([track]);
-                          setCurrentTrackIndex(0);
-                          setShowSearch(false);
-                        }}
+                        onClick={() => handleTrackSelect(track)}
                       >
                         <div className="flex items-center space-x-3">
                           {track.album?.images?.[0]?.url && (

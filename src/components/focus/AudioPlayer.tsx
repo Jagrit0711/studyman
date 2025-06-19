@@ -26,32 +26,55 @@ const AudioPlayer = ({ track, isPlaying, onTogglePlay, volume, onVolumeChange }:
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [audioLoaded, setAudioLoaded] = useState(false);
+  const [audioError, setAudioError] = useState(false);
 
-  console.log('AudioPlayer render:', { track, isPlaying, hasPreview: !!track?.preview_url });
+  console.log('AudioPlayer render:', { 
+    track: track?.name, 
+    isPlaying, 
+    hasPreview: !!track?.preview_url,
+    previewUrl: track?.preview_url
+  });
 
+  // Reset states when track changes
   useEffect(() => {
-    if (audioRef.current && track?.preview_url) {
-      console.log('Setting audio source:', track.preview_url);
-      audioRef.current.src = track.preview_url;
-      audioRef.current.load();
+    if (track?.preview_url) {
+      console.log('Loading new track:', track.name, track.preview_url);
       setAudioLoaded(false);
+      setAudioError(false);
+      setCurrentTime(0);
+      setDuration(0);
+      
+      if (audioRef.current) {
+        audioRef.current.src = track.preview_url;
+        audioRef.current.load();
+      }
     }
-  }, [track?.preview_url]);
+  }, [track?.id, track?.preview_url]);
 
+  // Handle play/pause when isPlaying changes
   useEffect(() => {
-    if (audioRef.current && audioLoaded) {
+    if (audioRef.current && audioLoaded && !audioError) {
       if (isPlaying && track?.preview_url) {
-        console.log('Playing audio');
-        audioRef.current.play().catch(error => {
-          console.error('Error playing audio:', error);
-        });
+        console.log('Attempting to play audio');
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              console.log('Audio playing successfully');
+            })
+            .catch(error => {
+              console.error('Error playing audio:', error);
+              setAudioError(true);
+            });
+        }
       } else {
         console.log('Pausing audio');
         audioRef.current.pause();
       }
     }
-  }, [isPlaying, track, audioLoaded]);
+  }, [isPlaying, audioLoaded, track?.preview_url, audioError]);
 
+  // Handle volume changes
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = isMuted ? 0 : volume / 100;
@@ -66,24 +89,28 @@ const AudioPlayer = ({ track, isPlaying, onTogglePlay, volume, onVolumeChange }:
 
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
+      console.log('Audio metadata loaded, duration:', audioRef.current.duration);
       setDuration(audioRef.current.duration);
       setAudioLoaded(true);
-      console.log('Audio loaded, duration:', audioRef.current.duration);
+      setAudioError(false);
     }
   };
 
+  const handleCanPlay = () => {
+    console.log('Audio can play');
+    setAudioLoaded(true);
+    setAudioError(false);
+  };
+
   const handleEnded = () => {
+    console.log('Audio ended');
     onTogglePlay();
     setCurrentTime(0);
   };
 
-  const handleCanPlay = () => {
-    setAudioLoaded(true);
-    console.log('Audio can play');
-  };
-
   const handleError = (e: any) => {
     console.error('Audio error:', e);
+    setAudioError(true);
     setAudioLoaded(false);
   };
 
@@ -96,7 +123,7 @@ const AudioPlayer = ({ track, isPlaying, onTogglePlay, volume, onVolumeChange }:
 
   const handleSeek = (value: number[]) => {
     const newTime = (value[0] / 100) * duration;
-    if (audioRef.current) {
+    if (audioRef.current && audioLoaded) {
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
     }
@@ -111,6 +138,7 @@ const AudioPlayer = ({ track, isPlaying, onTogglePlay, volume, onVolumeChange }:
     setIsMuted(!isMuted);
   };
 
+  // No track selected
   if (!track) {
     return (
       <div className="p-6 bg-gray-50 rounded-xl text-center border border-gray-200">
@@ -123,7 +151,7 @@ const AudioPlayer = ({ track, isPlaying, onTogglePlay, volume, onVolumeChange }:
     );
   }
 
-  // Show preview not available only if there's really no preview_url
+  // No preview URL available
   if (!track.preview_url) {
     return (
       <div className="p-6 bg-orange-50 rounded-xl text-center border border-orange-200">
@@ -131,7 +159,34 @@ const AudioPlayer = ({ track, isPlaying, onTogglePlay, volume, onVolumeChange }:
           <VolumeX className="w-8 h-8 text-orange-500" />
         </div>
         <p className="text-sm text-orange-700 font-medium">Preview not available</p>
-        <p className="text-xs text-orange-600 mt-1">Try selecting a different song</p>
+        <p className="text-xs text-orange-600 mt-1">This track doesn't have a 30-second preview</p>
+      </div>
+    );
+  }
+
+  // Audio error
+  if (audioError) {
+    return (
+      <div className="p-6 bg-red-50 rounded-xl text-center border border-red-200">
+        <div className="w-16 h-16 bg-red-200 rounded-full flex items-center justify-center mx-auto mb-3">
+          <VolumeX className="w-8 h-8 text-red-500" />
+        </div>
+        <p className="text-sm text-red-700 font-medium">Audio playback error</p>
+        <p className="text-xs text-red-600 mt-1">Failed to load or play this track</p>
+        <Button 
+          onClick={() => {
+            setAudioError(false);
+            if (audioRef.current && track.preview_url) {
+              audioRef.current.src = track.preview_url;
+              audioRef.current.load();
+            }
+          }}
+          variant="outline" 
+          size="sm" 
+          className="mt-2 border-red-300 text-red-600 hover:bg-red-100"
+        >
+          Retry
+        </Button>
       </div>
     );
   }
@@ -146,6 +201,7 @@ const AudioPlayer = ({ track, isPlaying, onTogglePlay, volume, onVolumeChange }:
         onCanPlay={handleCanPlay}
         onError={handleError}
         preload="metadata"
+        crossOrigin="anonymous"
       />
       
       {/* Track Info with Album Art */}
@@ -164,8 +220,8 @@ const AudioPlayer = ({ track, isPlaying, onTogglePlay, volume, onVolumeChange }:
             )}
           </div>
         ) : (
-          <div className="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center shadow-md">
-            <Play className="w-8 h-8 text-gray-600" />
+          <div className="w-16 h-16 bg-gradient-to-br from-green-200 to-green-300 rounded-lg flex items-center justify-center shadow-md">
+            <Play className="w-8 h-8 text-green-700" />
           </div>
         )}
         
@@ -175,8 +231,12 @@ const AudioPlayer = ({ track, isPlaying, onTogglePlay, volume, onVolumeChange }:
             {track.artists.map(a => a.name).join(', ')}
           </p>
           <div className="flex items-center mt-1">
-            <div className={`w-2 h-2 rounded-full mr-2 ${audioLoaded ? 'bg-green-500' : 'bg-orange-500'}`}></div>
-            <p className={`text-xs font-medium ${audioLoaded ? 'text-green-600' : 'text-orange-600'}`}>
+            <div className={`w-2 h-2 rounded-full mr-2 ${
+              audioLoaded ? 'bg-green-500' : 'bg-orange-500'
+            }`}></div>
+            <p className={`text-xs font-medium ${
+              audioLoaded ? 'text-green-600' : 'text-orange-600'
+            }`}>
               {audioLoaded ? '30s Preview Ready' : 'Loading...'}
             </p>
           </div>
