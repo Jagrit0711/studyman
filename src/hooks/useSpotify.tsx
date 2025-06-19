@@ -9,6 +9,9 @@ interface SpotifyTrack {
   artists: { name: string }[];
   preview_url: string | null;
   external_urls: { spotify: string };
+  album?: {
+    images: { url: string }[];
+  };
 }
 
 interface SpotifyPlaylist {
