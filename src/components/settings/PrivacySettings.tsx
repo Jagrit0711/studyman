@@ -45,15 +45,22 @@ const PrivacySettings = () => {
     try {
       console.log('Saving settings:', formData);
       
-      // Update settings
-      await updateSettings({
-        privacy_mode: formData.privacy_mode
-      });
+      // Update settings for privacy_mode
+      if (settings) {
+        await updateSettings({
+          privacy_mode: formData.privacy_mode
+        });
+      }
 
-      // Update profile details for Mom Mode
-      await saveProfileDetails({
-        enable_mom_mode: formData.enable_mom_mode
-      });
+      // Update profile details for Mom Mode - make sure to pass the current profile data
+      if (profileDetails) {
+        const updatedProfile = {
+          ...profileDetails,
+          enable_mom_mode: formData.enable_mom_mode
+        };
+        console.log('Updating profile with:', updatedProfile);
+        await saveProfileDetails(updatedProfile);
+      }
 
       setHasChanges(false);
       toast({

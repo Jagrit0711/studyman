@@ -7,16 +7,18 @@ import { Badge } from '@/components/ui/badge';
 import { MessageCircle, X, Send } from 'lucide-react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useLocation } from 'react-router-dom';
+import AnimatedMomAvatar from '@/components/AnimatedMomAvatar';
 
 const GlobalMomMode = () => {
   const { profileDetails } = useUserProfile();
   const location = useLocation();
   const [showMomDialog, setShowMomDialog] = useState(false);
   const [userReply, setUserReply] = useState('');
-  const [conversation, setConversation] = useState<{ sender: 'mom' | 'user', message: string }[]>([]);
+  const [conversation, setConversation] = useState<{ sender: 'mom' | 'user', message: string, mood?: string }[]>([]);
   const [isMinimized, setIsMinimized] = useState(false);
   const [lastActivityTime, setLastActivityTime] = useState(Date.now());
   const [lastPageChange, setLastPageChange] = useState(Date.now());
+  const [currentMood, setCurrentMood] = useState<'happy' | 'stern' | 'encouraging' | 'nagging' | 'proud'>('stern');
 
   // Check if Mom Mode is enabled
   const isMomModeEnabled = profileDetails?.enable_mom_mode === true;
@@ -28,31 +30,43 @@ const GlobalMomMode = () => {
   });
 
   const momMessages = {
-    procrastinating: [
-      "Hey! Stop scrolling and get back to studying!",
-      "I didn't raise you to waste time on social media!",
-      "Your future self will thank you for studying now instead of procrastinating!",
-      "Close that chat and open your books, young one!",
-      "You think success comes from chatting? GET TO WORK!",
-    ],
-    pageHopping: [
-      "Stop jumping between pages and focus on one thing!",
-      "You're like a butterfly - land somewhere and STUDY!",
-      "Pick a page and stick with it, honey!",
-      "All this clicking around won't help your grades!",
-    ],
-    motivational: [
-      "I know you can do better than this, sweetheart.",
-      "Remember why you started - now finish what you began!",
-      "Success is just one focused session away!",
-      "Your future career is waiting for you to get serious!",
-    ],
-    feedPageSpecific: [
-      "Why are you chatting when you should be studying?!",
-      "These posts won't help you pass your exams!",
-      "Stop gossiping and start focusing on your future!",
-      "Real talk: your grades matter more than this feed!",
-    ]
+    procrastinating: {
+      messages: [
+        "Hey! Stop scrolling and get back to studying!",
+        "I didn't raise you to waste time on social media!",
+        "Your future self will thank you for studying now instead of procrastinating!",
+        "Close that chat and open your books, young one!",
+        "You think success comes from chatting? GET TO WORK!",
+      ],
+      mood: 'nagging' as const
+    },
+    pageHopping: {
+      messages: [
+        "Stop jumping between pages and focus on one thing!",
+        "You're like a butterfly - land somewhere and STUDY!",
+        "Pick a page and stick with it, honey!",
+        "All this clicking around won't help your grades!",
+      ],
+      mood: 'stern' as const
+    },
+    motivational: {
+      messages: [
+        "I know you can do better than this, sweetheart.",
+        "Remember why you started - now finish what you began!",
+        "Success is just one focused session away!",
+        "Your future career is waiting for you to get serious!",
+      ],
+      mood: 'encouraging' as const
+    },
+    feedPageSpecific: {
+      messages: [
+        "Why are you chatting when you should be studying?!",
+        "These posts won't help you pass your exams!",
+        "Stop gossiping and start focusing on your future!",
+        "Real talk: your grades matter more than this feed!",
+      ],
+      mood: 'stern' as const
+    }
   };
 
   // Track user activity
@@ -118,11 +132,12 @@ const GlobalMomMode = () => {
   }, [isMomModeEnabled, lastActivityTime, lastPageChange, location.pathname, showMomDialog]);
 
   const triggerMomNag = (type: keyof typeof momMessages) => {
-    const messages = momMessages[type];
-    const message = messages[Math.floor(Math.random() * messages.length)];
+    const messageData = momMessages[type];
+    const message = messageData.messages[Math.floor(Math.random() * messageData.messages.length)];
 
     console.log('Mom is nagging:', message);
-    setConversation([{ sender: 'mom', message }]);
+    setConversation([{ sender: 'mom', message, mood: messageData.mood }]);
+    setCurrentMood(messageData.mood);
     setShowMomDialog(true);
     setIsMinimized(false);
   };
@@ -135,16 +150,17 @@ const GlobalMomMode = () => {
 
     // Mom's responses based on what user says
     const momResponses = [
-      "Nice try, but I'm still your mom and you still need to study!",
-      "Excuses, excuses! I've heard them all before.",
-      "That's what your father would say too. Now get to work!",
-      "I love you, but loving you means pushing you to succeed!",
-      "You can sweet talk me all you want, but those grades won't improve themselves!",
+      { message: "Nice try, but I'm still your mom and you still need to study!", mood: 'stern' },
+      { message: "Excuses, excuses! I've heard them all before.", mood: 'nagging' },
+      { message: "That's what your father would say too. Now get to work!", mood: 'stern' },
+      { message: "I love you, but loving you means pushing you to succeed!", mood: 'encouraging' },
+      { message: "You can sweet talk me all you want, but those grades won't improve themselves!", mood: 'nagging' },
     ];
 
     setTimeout(() => {
       const response = momResponses[Math.floor(Math.random() * momResponses.length)];
-      setConversation(prev => [...prev, { sender: 'mom', message: response }]);
+      setConversation(prev => [...prev, { sender: 'mom', message: response.message, mood: response.mood }]);
+      setCurrentMood(response.mood as any);
     }, 1000);
 
     setUserReply('');
@@ -158,9 +174,7 @@ const GlobalMomMode = () => {
         <div className="p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-pink-400 to-purple-400 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-bold">👩</span>
-              </div>
+              <AnimatedMomAvatar mood={currentMood} size="md" />
               <div>
                 <h3 className="text-sm font-semibold text-gray-900">Mom Mode</h3>
                 <Badge variant="outline" className="text-xs border-purple-300 text-purple-600">
@@ -194,16 +208,23 @@ const GlobalMomMode = () => {
                 {conversation.map((msg, idx) => (
                   <div
                     key={idx}
-                    className={`p-2 rounded-lg text-sm ${
+                    className={`p-2 rounded-lg text-sm transition-all duration-300 ${
                       msg.sender === 'mom'
-                        ? 'bg-pink-100 text-pink-800 border-l-4 border-pink-400'
+                        ? 'bg-pink-100 text-pink-800 border-l-4 border-pink-400 animate-fade-in'
                         : 'bg-gray-100 text-gray-800 ml-4'
                     }`}
                   >
-                    <span className="font-medium">
-                      {msg.sender === 'mom' ? '👩 Mom: ' : '👤 You: '}
-                    </span>
-                    {msg.message}
+                    <div className="flex items-start space-x-2">
+                      {msg.sender === 'mom' && (
+                        <AnimatedMomAvatar mood={msg.mood as any || currentMood} size="sm" />
+                      )}
+                      <div>
+                        <span className="font-medium">
+                          {msg.sender === 'mom' ? 'Mom: ' : 'You: '}
+                        </span>
+                        {msg.message}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
