@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
+import GlobalMomMode from "@/components/GlobalMomMode";
 import Landing from "./pages/Landing";
 import Index from "./pages/Index";
 import Feed from "./pages/Feed";
@@ -46,6 +47,9 @@ const App = () => (
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            
+            {/* Global Mom Mode - appears on all pages when enabled */}
+            <GlobalMomMode />
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>

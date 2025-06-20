@@ -31,22 +31,26 @@ const PrivacySettings = () => {
       };
       setFormData(newFormData);
       setHasChanges(false);
+      console.log('Loaded settings:', { settings, profileDetails, newFormData });
     }
   }, [settings, profileDetails]);
 
   const handleChange = (field: string, value: boolean) => {
+    console.log(`Changing ${field} to ${value}`);
     setFormData(prev => ({ ...prev, [field]: value }));
     setHasChanges(true);
   };
 
   const handleSave = async () => {
     try {
+      console.log('Saving settings:', formData);
+      
       // Update settings
       await updateSettings({
         privacy_mode: formData.privacy_mode
       });
 
-      // Update profile details
+      // Update profile details for Mom Mode
       await saveProfileDetails({
         enable_mom_mode: formData.enable_mom_mode
       });
@@ -56,7 +60,10 @@ const PrivacySettings = () => {
         title: "Success",
         description: "Privacy settings updated successfully"
       });
+      
+      console.log('Settings saved successfully');
     } catch (error) {
+      console.error('Error saving settings:', error);
       toast({
         title: "Error",
         description: "Failed to update privacy settings",
@@ -121,10 +128,10 @@ const PrivacySettings = () => {
                 <Clock className="w-4 h-4 text-purple-500" />
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Get motivational (and slightly nagging) reminders when you're procrastinating on the focus page
+                Get motivational (and slightly nagging) reminders across the entire site when you're procrastinating
               </p>
               <p className="text-xs text-purple-600">
-                Mom will encourage you to start working and type faster, just like... well, your mom!
+                Mom will encourage you to study, stop chatting, and be productive - just like your real mom!
               </p>
             </div>
             <Switch
