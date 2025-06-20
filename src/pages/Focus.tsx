@@ -8,7 +8,9 @@ import { Play, Pause, Maximize } from 'lucide-react';
 import Header from '@/components/Header';
 import SpotifyPlayer from '@/components/focus/SpotifyPlayer';
 import CalendarScheduler from '@/components/focus/CalendarScheduler';
+import MomMode from '@/components/focus/MomMode';
 import { useFocusSessions } from '@/hooks/useFocusSessions';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 const Focus = () => {
   const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 minutes in seconds
@@ -16,14 +18,49 @@ const Focus = () => {
   const [sessionType, setSessionType] = useState<'work' | 'shortBreak' | 'longBreak'>('work');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
+  const [lastActivityTime, setLastActivityTime] = useState(Date.now());
+  const [isTypingSlow, setIsTypingSlow] = useState(false);
+  const [lastTypingTime, setLastTypingTime] = useState(Date.now());
   
   const { activeSession, startSession, completeSession, sessions } = useFocusSessions();
+  const { profileDetails } = useUserProfile();
 
   const sessionTypes = {
     work: { duration: 25 * 60, label: 'Focus Session', color: 'bg-red-500' },
     shortBreak: { duration: 5 * 60, label: 'Short Break', color: 'bg-green-500' },
     longBreak: { duration: 15 * 60, label: 'Long Break', color: 'bg-blue-500' }
   };
+
+  // Track user activity for Mom Mode
+  useEffect(() => {
+    const updateActivity = () => setLastActivityTime(Date.now());
+    
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(event => {
+      document.addEventListener(event, updateActivity);
+    });
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, updateActivity);
+      });
+    };
+  }, []);
+
+  // Track typing speed for Mom Mode
+  useEffect(() => {
+    const handleTyping = () => {
+      const now = Date.now();
+      const timeSinceLastType = now - lastTypingTime;
+      
+      // If more than 3 seconds between keystrokes, consider it slow typing
+      setIsTypingSlow(timeSinceLastType > 3000);
+      setLastTypingTime(now);
+    };
+
+    document.addEventListener('keydown', handleTyping);
+    return () => document.removeEventListener('keydown', handleTyping);
+  }, [lastTypingTime]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -42,7 +79,6 @@ const Focus = () => {
   const handleSessionComplete = async () => {
     setIsActive(false);
     
-    // Complete the active session in database if it exists
     if (activeSession) {
       await completeSession(activeSession.id);
     }
@@ -59,7 +95,6 @@ const Focus = () => {
 
   const toggleTimer = async () => {
     if (!isActive && !activeSession) {
-      // Starting a new session
       const newSession = await startSession({
         session_type: sessionType,
         duration_minutes: sessionTypes[sessionType].duration / 60,
@@ -70,7 +105,6 @@ const Focus = () => {
         setIsActive(true);
       }
     } else {
-      // Just toggle the timer (pause/resume)
       setIsActive(!isActive);
     }
   };
@@ -79,7 +113,6 @@ const Focus = () => {
     setIsActive(false);
     setTimeLeft(sessionTypes[sessionType].duration);
     
-    // If there's an active session, complete it
     if (activeSession) {
       await completeSession(activeSession.id);
     }
@@ -107,7 +140,7 @@ const Focus = () => {
     longBreak: 'bg-gradient-to-br from-blue-50 to-indigo-50'
   };
 
-  // Calculate today's stats from sessions
+  // Calculate today's stats
   const todaysSessions = sessions.filter(session => {
     const today = new Date().toDateString();
     const sessionDate = new Date(session.created_at).toDateString();
@@ -129,12 +162,16 @@ const Focus = () => {
       
       <div className="container mx-auto px-4 py-8">
         {!isFullscreen && (
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-8 animate-fade-in">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Focus Mode</h1>
               <p className="text-gray-600">Stay focused with Pomodoro technique, music, and task tracking</p>
             </div>
-            <Button onClick={toggleFullscreen} variant="outline" className="border-gray-300">
+            <Button 
+              onClick={toggleFullscreen} 
+              variant="outline" 
+              className="border-gray-300 transition-all duration-200 transform hover:scale-105"
+            >
               <Maximize className="w-4 h-4 mr-2" />
               Fullscreen
             </Button>
@@ -145,10 +182,10 @@ const Focus = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Timer Section */}
             <div className="lg:col-span-2">
-              <Card className="p-8 text-center border-gray-200 shadow-lg">
+              <Card className="p-8 text-center border-gray-200 shadow-lg animate-scale-in">
                 <div className="mb-6">
                   <Badge 
-                    className={`${sessionTypes[sessionType].color} text-white text-sm px-4 py-1`}
+                    className={`${sessionTypes[sessionType].color} text-white text-sm px-4 py-1 transition-all duration-200`}
                   >
                     {sessionTypes[sessionType].label}
                     {activeSession && ' (Active)'}
@@ -156,7 +193,7 @@ const Focus = () => {
                 </div>
                 
                 <div className="mb-8">
-                  <div className={`text-8xl font-mono font-bold mb-4 ${
+                  <div className={`text-8xl font-mono font-bold mb-4 transition-colors duration-300 ${
                     sessionType === 'work' ? 'text-red-600' : 
                     sessionType === 'shortBreak' ? 'text-green-600' : 'text-blue-600'
                   }`}>
@@ -167,12 +204,17 @@ const Focus = () => {
                     <Button
                       onClick={toggleTimer}
                       size="lg"
-                      className={`${sessionTypes[sessionType].color} hover:opacity-90 text-white px-8 py-3`}
+                      className={`${sessionTypes[sessionType].color} hover:opacity-90 text-white px-8 py-3 transition-all duration-200 transform hover:scale-105 active:scale-95`}
                     >
                       {isActive ? <Pause className="w-6 h-6 mr-2" /> : <Play className="w-6 h-6 mr-2" />}
                       {isActive ? 'Pause' : 'Start'}
                     </Button>
-                    <Button onClick={resetTimer} variant="outline" size="lg" className="border-gray-300 px-8 py-3">
+                    <Button 
+                      onClick={resetTimer} 
+                      variant="outline" 
+                      size="lg" 
+                      className="border-gray-300 px-8 py-3 transition-all duration-200 transform hover:scale-105 active:scale-95"
+                    >
                       Reset
                     </Button>
                   </div>
@@ -191,7 +233,9 @@ const Focus = () => {
                         }
                       }}
                       disabled={isActive || !!activeSession}
-                      className={sessionType === key ? `${type.color} text-white` : 'border-gray-300'}
+                      className={`transition-all duration-200 transform hover:scale-105 ${
+                        sessionType === key ? `${type.color} text-white` : 'border-gray-300'
+                      }`}
                     >
                       {type.label}
                     </Button>
@@ -205,7 +249,7 @@ const Focus = () => {
                     value={taskTitle}
                     onChange={(e) => setTaskTitle(e.target.value)}
                     disabled={isActive || !!activeSession}
-                    className="text-center text-lg border-gray-300 focus:border-gray-500"
+                    className="text-center text-lg border-gray-300 focus:border-gray-500 transition-colors"
                   />
                 </div>
               </Card>
@@ -224,7 +268,7 @@ const Focus = () => {
               />
 
               {/* Stats */}
-              <Card className="p-6 border-gray-200">
+              <Card className="p-6 border-gray-200 animate-fade-in">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Today's Progress</h3>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -247,6 +291,16 @@ const Focus = () => {
           </div>
         </div>
       </div>
+
+      {/* Mom Mode Component */}
+      {profileDetails?.enable_mom_mode && (
+        <MomMode
+          isOnFocusPage={true}
+          hasStartedSession={!!activeSession || isActive}
+          isTypingSlow={isTypingSlow}
+          lastActivityTime={lastActivityTime}
+        />
+      )}
     </div>
   );
 };

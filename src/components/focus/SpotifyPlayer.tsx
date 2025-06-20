@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { SkipForward, SkipBack, Search, Music, Settings, Shuffle, Repeat } from 'lucide-react';
 import { useSpotify } from '@/hooks/useSpotify';
-import AudioPlayer from './AudioPlayer';
+import SimpleAudioPlayer from './SimpleAudioPlayer';
 
 const SpotifyPlayer = () => {
   const { 
@@ -40,7 +39,7 @@ const SpotifyPlayer = () => {
         const results = await searchTracks(searchQuery);
         console.log('Search results:', results);
         
-        // Show all results but prioritize tracks with preview URLs
+        // Prioritize tracks with preview URLs
         const tracksWithPreview = results.filter(track => track.preview_url);
         const tracksWithoutPreview = results.filter(track => !track.preview_url);
         setSearchResults([...tracksWithPreview, ...tracksWithoutPreview]);
@@ -75,7 +74,6 @@ const SpotifyPlayer = () => {
           const playlistTracks = tracks.items.map((item: any) => item.track).filter(Boolean);
           console.log('Playlist tracks:', playlistTracks);
           
-          // Find the first track with a preview URL
           const trackWithPreview = playlistTracks.find(track => track.preview_url);
           const startingTrack = trackWithPreview || playlistTracks[0];
           
@@ -92,12 +90,9 @@ const SpotifyPlayer = () => {
 
   const skipForward = () => {
     if (currentPlaylist.length > 0) {
-      let nextIndex;
-      if (isShuffled) {
-        nextIndex = Math.floor(Math.random() * currentPlaylist.length);
-      } else {
-        nextIndex = (currentTrackIndex + 1) % currentPlaylist.length;
-      }
+      let nextIndex = isShuffled 
+        ? Math.floor(Math.random() * currentPlaylist.length)
+        : (currentTrackIndex + 1) % currentPlaylist.length;
       
       setCurrentTrackIndex(nextIndex);
       playTrack(currentPlaylist[nextIndex]);
@@ -106,12 +101,9 @@ const SpotifyPlayer = () => {
 
   const skipBackward = () => {
     if (currentPlaylist.length > 0) {
-      let prevIndex;
-      if (isShuffled) {
-        prevIndex = Math.floor(Math.random() * currentPlaylist.length);
-      } else {
-        prevIndex = currentTrackIndex === 0 ? currentPlaylist.length - 1 : currentTrackIndex - 1;
-      }
+      let prevIndex = isShuffled 
+        ? Math.floor(Math.random() * currentPlaylist.length)
+        : currentTrackIndex === 0 ? currentPlaylist.length - 1 : currentTrackIndex - 1;
       
       setCurrentTrackIndex(prevIndex);
       playTrack(currentPlaylist[prevIndex]);
@@ -120,7 +112,7 @@ const SpotifyPlayer = () => {
 
   if (!isAuthenticated) {
     return (
-      <Card className="p-6 border-gray-200 shadow-sm">
+      <Card className="p-6 border-gray-200 shadow-sm animate-fade-in">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Music</h3>
           <Badge variant="outline" className="border-red-300 text-red-600 bg-red-50">
@@ -129,7 +121,7 @@ const SpotifyPlayer = () => {
         </div>
         
         <div className="space-y-4">
-          <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl text-center border border-green-200">
+          <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl text-center border border-green-200 animate-scale-in">
             <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
               <Music className="w-8 h-8 text-white" />
             </div>
@@ -160,17 +152,17 @@ const SpotifyPlayer = () => {
   }
 
   return (
-    <Card className="p-6 border-gray-200 shadow-sm">
+    <Card className="p-6 border-gray-200 shadow-sm animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold text-gray-900">Music</h3>
         <div className="flex items-center space-x-2">
           <Badge className="bg-green-100 text-green-800 border-green-200">
-            <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+            <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
             Connected
           </Badge>
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="border-gray-300 hover:bg-gray-50 rounded-lg">
+              <Button variant="outline" size="sm" className="border-gray-300 hover:bg-gray-50 rounded-lg transition-colors">
                 <Settings className="w-4 h-4" />
               </Button>
             </DialogTrigger>
@@ -182,7 +174,7 @@ const SpotifyPlayer = () => {
                 <Button 
                   onClick={disconnect} 
                   variant="outline" 
-                  className="w-full border-red-200 text-red-600 hover:bg-red-50"
+                  className="w-full border-red-200 text-red-600 hover:bg-red-50 transition-colors"
                 >
                   Disconnect Spotify
                 </Button>
@@ -193,8 +185,8 @@ const SpotifyPlayer = () => {
       </div>
       
       <div className="space-y-6">
-        {/* Audio Player Component */}
-        <AudioPlayer
+        {/* Simple Audio Player */}
+        <SimpleAudioPlayer
           track={currentTrack}
           isPlaying={isPlaying}
           onTogglePlay={togglePlayback}
@@ -208,7 +200,7 @@ const SpotifyPlayer = () => {
             onClick={() => setIsShuffled(!isShuffled)}
             variant="outline"
             size="sm"
-            className={`border-gray-300 rounded-lg transition-all duration-200 ${
+            className={`border-gray-300 rounded-lg transition-all duration-200 transform hover:scale-105 ${
               isShuffled 
                 ? 'bg-green-100 text-green-700 border-green-300 shadow-sm' 
                 : 'hover:bg-gray-50'
@@ -241,7 +233,7 @@ const SpotifyPlayer = () => {
             onClick={() => setIsRepeating(!isRepeating)}
             variant="outline"
             size="sm"
-            className={`border-gray-300 rounded-lg transition-all duration-200 ${
+            className={`border-gray-300 rounded-lg transition-all duration-200 transform hover:scale-105 ${
               isRepeating 
                 ? 'bg-green-100 text-green-700 border-green-300 shadow-sm' 
                 : 'hover:bg-gray-50'
@@ -251,7 +243,7 @@ const SpotifyPlayer = () => {
           </Button>
         </div>
 
-        {/* Search and Playlists */}
+        {/* Search Dialog */}
         <Dialog open={showSearch} onOpenChange={setShowSearch}>
           <DialogTrigger asChild>
             <Button 
@@ -273,12 +265,12 @@ const SpotifyPlayer = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  className="flex-1 rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500"
+                  className="flex-1 rounded-lg border-gray-300 focus:border-green-500 focus:ring-green-500 transition-colors"
                 />
                 <Button 
                   onClick={handleSearch}
                   disabled={searchLoading}
-                  className="bg-green-600 hover:bg-green-700 text-white rounded-lg px-4"
+                  className="bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 transition-colors"
                 >
                   {searchLoading ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -296,7 +288,7 @@ const SpotifyPlayer = () => {
                     {searchResults.map((track) => (
                       <div
                         key={track.id}
-                        className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all duration-200 border ${
+                        className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all duration-200 border transform hover:scale-105 ${
                           track.preview_url 
                             ? 'bg-green-50 hover:bg-green-100 border-green-200 hover:border-green-300' 
                             : 'bg-gray-50 hover:bg-gray-100 border-gray-200 hover:border-gray-300 opacity-60'
@@ -342,7 +334,7 @@ const SpotifyPlayer = () => {
                   {playlists.slice(0, 10).map((playlist) => (
                     <div
                       key={playlist.id}
-                      className="flex items-center justify-between p-3 bg-blue-50 hover:bg-blue-100 rounded-lg cursor-pointer border border-blue-200 hover:border-blue-300 transition-all duration-200"
+                      className="flex items-center justify-between p-3 bg-blue-50 hover:bg-blue-100 rounded-lg cursor-pointer border border-blue-200 hover:border-blue-300 transition-all duration-200 transform hover:scale-105"
                       onClick={() => {
                         console.log('Selected playlist:', playlist);
                         playPlaylist(playlist.id);

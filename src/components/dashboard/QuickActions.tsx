@@ -12,22 +12,6 @@ const QuickActions = () => {
 
   const actions = [
     {
-      id: 'video-call',
-      label: 'Start Video Call (Coming Soon)',
-      icon: Video,
-      onClick: () => setShowComingSoon(true),
-      color: 'bg-gray-900',
-      featured: true,
-    },
-    {
-      id: 'schedule-study',
-      label: 'Schedule Study Session',
-      icon: Calendar,
-      onClick: () => navigate('/focus'),
-      color: 'bg-blue-500',
-      featured: false,
-    },
-    {
       id: 'focus-session',
       label: 'Start Focus Session',
       icon: Target,
@@ -36,8 +20,16 @@ const QuickActions = () => {
       featured: false,
     },
     {
+      id: 'schedule-study',
+      label: 'Schedule Study',
+      icon: Calendar,
+      onClick: () => navigate('/focus'),
+      color: 'bg-blue-500',
+      featured: false,
+    },
+    {
       id: 'create-room',
-      label: 'Create Study Room',
+      label: 'Study Room',
       icon: Users,
       onClick: () => navigate('/create-room'),
       color: 'bg-purple-500',
@@ -53,38 +45,33 @@ const QuickActions = () => {
     },
   ];
 
-  const featuredAction = actions.find(action => action.featured);
-  const regularActions = actions.filter(action => !action.featured);
-
   return (
     <>
-      <Card className="p-4 border-gray-200">
+      <Card className="p-4 border-gray-200 animate-fade-in">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
         
         <div className="space-y-3">
-          {/* Featured Action */}
-          {featuredAction && (
-            <Button
-              onClick={featuredAction.onClick}
-              className={`w-full h-12 ${featuredAction.color} hover:opacity-90 text-white text-sm font-medium`}
-            >
-              <featuredAction.icon className="w-5 h-5 mr-2" />
-              {featuredAction.label}
-            </Button>
-          )}
+          {/* Featured Action - Video Call */}
+          <Button
+            onClick={() => setShowComingSoon(true)}
+            className="w-full h-12 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium transition-all duration-200 transform hover:scale-105 active:scale-95 animate-scale-in"
+          >
+            <Video className="w-5 h-5 mr-2" />
+            Start Video Call (Coming Soon)
+          </Button>
           
-          {/* Regular Actions */}
+          {/* Regular Actions - Smaller Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-            {regularActions.map((action) => {
+            {actions.map((action) => {
               const Icon = action.icon;
               return (
                 <Button
                   key={action.id}
                   onClick={action.onClick}
                   variant="outline"
-                  className="h-16 flex-col space-y-1 border-gray-200 hover:bg-gray-50"
+                  className="h-14 flex-col space-y-1 border-gray-200 hover:bg-gray-50 transition-all duration-200 transform hover:scale-105 active:scale-95"
                 >
-                  <Icon className="w-5 h-5 text-gray-600" />
+                  <Icon className="w-4 h-4 text-gray-600" />
                   <span className="text-xs text-center text-gray-700">{action.label}</span>
                 </Button>
               );
