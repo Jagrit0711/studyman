@@ -1,16 +1,15 @@
-
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { MessageCircle, X, Send } from 'lucide-react';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { useUserSettings } from '@/hooks/useUserSettings';
 import { useLocation } from 'react-router-dom';
 import AnimatedMomAvatar from '@/components/AnimatedMomAvatar';
 
 const GlobalMomMode = () => {
-  const { profileDetails } = useUserProfile();
+  const { settings } = useUserSettings();
   const location = useLocation();
   const [showMomDialog, setShowMomDialog] = useState(false);
   const [userReply, setUserReply] = useState('');
@@ -21,11 +20,11 @@ const GlobalMomMode = () => {
   const [currentMood, setCurrentMood] = useState<'happy' | 'stern' | 'encouraging' | 'nagging' | 'proud'>('stern');
 
   // Check if Mom Mode is enabled
-  const isMomModeEnabled = profileDetails?.enable_mom_mode === true;
+  const isMomModeEnabled = settings?.enable_mom_mode === true;
 
   console.log('GlobalMomMode render:', { 
     isMomModeEnabled, 
-    profileDetails: profileDetails?.enable_mom_mode,
+    settings: settings?.enable_mom_mode,
     currentPath: location.pathname
   });
 

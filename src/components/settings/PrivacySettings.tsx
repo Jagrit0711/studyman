@@ -8,12 +8,10 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Save, Shield, Clock, ExternalLink } from 'lucide-react';
 import { useUserSettings } from '@/hooks/useUserSettings';
-import { useUserProfile } from '@/hooks/useUserProfile';
 import { useToast } from '@/hooks/use-toast';
 
 const PrivacySettings = () => {
   const { settings, loading: settingsLoading, updateSettings } = useUserSettings();
-  const { profileDetails, loading: profileLoading, saveProfileDetails } = useUserProfile();
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
@@ -24,16 +22,16 @@ const PrivacySettings = () => {
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
-    if (settings && profileDetails !== undefined) {
+    if (settings) {
       const newFormData = {
         privacy_mode: settings.privacy_mode ?? false,
-        enable_mom_mode: profileDetails?.enable_mom_mode ?? false
+        enable_mom_mode: settings.enable_mom_mode ?? false
       };
       setFormData(newFormData);
       setHasChanges(false);
-      console.log('Loaded settings:', { settings, profileDetails, newFormData });
+      console.log('Loaded settings:', { settings, newFormData });
     }
-  }, [settings, profileDetails]);
+  }, [settings]);
 
   const handleChange = (field: string, value: boolean) => {
     console.log(`Changing ${field} to ${value}`);
@@ -45,22 +43,11 @@ const PrivacySettings = () => {
     try {
       console.log('Saving settings:', formData);
       
-      // Update settings for privacy_mode
-      if (settings) {
-        await updateSettings({
-          privacy_mode: formData.privacy_mode
-        });
-      }
-
-      // Update profile details for Mom Mode - make sure to pass the current profile data
-      if (profileDetails) {
-        const updatedProfile = {
-          ...profileDetails,
-          enable_mom_mode: formData.enable_mom_mode
-        };
-        console.log('Updating profile with:', updatedProfile);
-        await saveProfileDetails(updatedProfile);
-      }
+      // Update both settings in the user_settings table
+      await updateSettings({
+        privacy_mode: formData.privacy_mode,
+        enable_mom_mode: formData.enable_mom_mode
+      });
 
       setHasChanges(false);
       toast({
@@ -79,7 +66,7 @@ const PrivacySettings = () => {
     }
   };
 
-  if (settingsLoading || profileLoading) {
+  if (settingsLoading) {
     return (
       <Card className="border-0 shadow-sm animate-fade-in">
         <CardContent className="p-8">
