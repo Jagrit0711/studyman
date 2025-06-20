@@ -11,6 +11,7 @@ interface UserSettings {
   notifications: boolean;
   email_notifications: boolean;
   privacy_mode: boolean;
+  enable_mom_mode: boolean;
   language: string;
   timezone: string;
   created_at: string;
@@ -56,6 +57,7 @@ export const useUserSettings = () => {
             notifications: true,
             email_notifications: true,
             privacy_mode: false,
+            enable_mom_mode: false,
             language: 'en',
             timezone: 'UTC'
           })
