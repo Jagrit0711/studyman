@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,11 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { MessageCircle, X, Send } from 'lucide-react';
 import { useUserSettings } from '@/hooks/useUserSettings';
+import { useAuth } from '@/hooks/useAuth';
 import { useLocation } from 'react-router-dom';
 import AnimatedMomAvatar from '@/components/AnimatedMomAvatar';
 
 const GlobalMomMode = () => {
-  const { settings } = useUserSettings();
+  const { user } = useAuth();
+  const { settings, loading } = useUserSettings();
   const location = useLocation();
   const [showMomDialog, setShowMomDialog] = useState(false);
   const [userReply, setUserReply] = useState('');
@@ -19,14 +22,41 @@ const GlobalMomMode = () => {
   const [lastPageChange, setLastPageChange] = useState(Date.now());
   const [currentMood, setCurrentMood] = useState<'happy' | 'stern' | 'encouraging' | 'nagging' | 'proud'>('stern');
 
+  // Don't show Mom Mode if user is not authenticated
+  if (!user) {
+    console.log('GlobalMomMode: User not authenticated, not showing Mom Mode');
+    return null;
+  }
+
+  // Don't show Mom Mode on landing page or auth pages
+  const excludedPaths = ['/', '/login', '/signup', '/onboarding'];
+  if (excludedPaths.includes(location.pathname)) {
+    console.log('GlobalMomMode: On excluded path, not showing Mom Mode:', location.pathname);
+    return null;
+  }
+
   // Check if Mom Mode is enabled
   const isMomModeEnabled = settings?.enable_mom_mode === true;
 
   console.log('GlobalMomMode render:', { 
     isMomModeEnabled, 
-    settings: settings?.enable_mom_mode,
+    settings,
+    loading,
+    user: !!user,
     currentPath: location.pathname
   });
+
+  // Don't render if still loading settings
+  if (loading) {
+    console.log('GlobalMomMode: Still loading settings');
+    return null;
+  }
+
+  // Don't render if Mom Mode is not enabled
+  if (!isMomModeEnabled) {
+    console.log('GlobalMomMode: Mom Mode not enabled');
+    return null;
+  }
 
   const momMessages = {
     procrastinating: {
@@ -70,6 +100,8 @@ const GlobalMomMode = () => {
 
   // Track user activity
   useEffect(() => {
+    if (!isMomModeEnabled) return;
+    
     const updateActivity = () => setLastActivityTime(Date.now());
     
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
@@ -82,20 +114,32 @@ const GlobalMomMode = () => {
         document.removeEventListener(event, updateActivity);
       });
     };
-  }, []);
+  }, [isMomModeEnabled]);
 
   // Track page changes
   useEffect(() => {
+    if (!isMomModeEnabled) return;
+    
     setLastPageChange(Date.now());
-  }, [location.pathname]);
+    console.log('Page changed to:', location.pathname);
+  }, [location.pathname, isMomModeEnabled]);
 
   // Mom's nagging logic
   useEffect(() => {
     if (!isMomModeEnabled) return;
 
+    console.log('Setting up Mom nagging interval');
+
     const checkForNagging = () => {
       const timeSinceActivity = Date.now() - lastActivityTime;
       const timeSincePageChange = Date.now() - lastPageChange;
+      
+      console.log('Checking for nagging:', {
+        timeSinceActivity,
+        timeSincePageChange,
+        currentPath: location.pathname,
+        showMomDialog
+      });
       
       // Different triggers based on page and behavior
       let shouldNag = false;
@@ -103,30 +147,34 @@ const GlobalMomMode = () => {
 
       // On feed page - nag more aggressively
       if (location.pathname === '/feed' || location.pathname === '/dashboard') {
-        if (timeSinceActivity > 20000) { // 20 seconds of being on feed
+        if (timeSinceActivity > 15000) { // 15 seconds of being on feed
           shouldNag = true;
           messageType = 'feedPageSpecific';
+          console.log('Should nag: Feed page activity timeout');
         }
       }
       
       // Page hopping behavior
-      if (timeSincePageChange < 5000 && timeSinceActivity > 15000) {
+      if (timeSincePageChange < 5000 && timeSinceActivity > 10000) {
         shouldNag = true;
         messageType = 'pageHopping';
+        console.log('Should nag: Page hopping detected');
       }
       
       // General procrastination
-      if (timeSinceActivity > 45000) { // 45 seconds idle
+      if (timeSinceActivity > 30000) { // 30 seconds idle
         shouldNag = true;
         messageType = 'procrastinating';
+        console.log('Should nag: General procrastination');
       }
 
       if (shouldNag && !showMomDialog) {
+        console.log('Triggering Mom nag with type:', messageType);
         triggerMomNag(messageType);
       }
     };
 
-    const interval = setInterval(checkForNagging, 8000); // Check every 8 seconds
+    const interval = setInterval(checkForNagging, 5000); // Check every 5 seconds
     return () => clearInterval(interval);
   }, [isMomModeEnabled, lastActivityTime, lastPageChange, location.pathname, showMomDialog]);
 
@@ -165,7 +213,9 @@ const GlobalMomMode = () => {
     setUserReply('');
   };
 
-  if (!isMomModeEnabled || !showMomDialog) return null;
+  if (!showMomDialog) {
+    return null;
+  }
 
   return (
     <div className={`fixed bottom-4 right-4 z-50 transition-all duration-300 ${isMinimized ? 'transform scale-75' : ''}`}>
