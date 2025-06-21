@@ -21,6 +21,10 @@ const GlobalMomMode = () => {
   const [lastActivityTime, setLastActivityTime] = useState(Date.now());
   const [lastPageChange, setLastPageChange] = useState(Date.now());
   const [currentMood, setCurrentMood] = useState<'happy' | 'stern' | 'encouraging' | 'nagging' | 'proud'>('stern');
+  const [lastTypingTime, setLastTypingTime] = useState(Date.now());
+  const [typingSpeed, setTypingSpeed] = useState(0);
+  const [isTypingSlow, setIsTypingSlow] = useState(false);
+  const [keystrokes, setKeystrokes] = useState(0);
 
   // Don't show Mom Mode if user is not authenticated
   if (!user) {
@@ -43,7 +47,9 @@ const GlobalMomMode = () => {
     settings,
     loading,
     user: !!user,
-    currentPath: location.pathname
+    currentPath: location.pathname,
+    typingSpeed,
+    isTypingSlow
   });
 
   // Don't render if still loading settings
@@ -78,6 +84,24 @@ const GlobalMomMode = () => {
       ],
       mood: 'stern' as const
     },
+    slowTyping: {
+      messages: [
+        "Come on! Type faster! Your thoughts are moving slower than molasses!",
+        "Are you typing with your toes? Speed it up!",
+        "I've seen turtles type faster than you!",
+        "Focus! Your typing is as slow as your progress!",
+      ],
+      mood: 'nagging' as const
+    },
+    dashboardIdle: {
+      messages: [
+        "You're just staring at the dashboard! Do something productive!",
+        "The dashboard won't study for you - get moving!",
+        "Stop admiring your stats and start improving them!",
+        "Looking at your dashboard won't make your grades better!",
+      ],
+      mood: 'stern' as const
+    },
     motivational: {
       messages: [
         "I know you can do better than this, sweetheart.",
@@ -98,21 +122,46 @@ const GlobalMomMode = () => {
     }
   };
 
-  // Track user activity
+  // Track user activity and typing
   useEffect(() => {
     if (!isMomModeEnabled) return;
     
+    let keystrokeCount = 0;
+    let startTime = Date.now();
+    
     const updateActivity = () => setLastActivityTime(Date.now());
     
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    const handleKeyPress = (e: KeyboardEvent) => {
+      const now = Date.now();
+      setLastActivityTime(now);
+      setLastTypingTime(now);
+      
+      keystrokeCount++;
+      setKeystrokes(keystrokeCount);
+      
+      // Calculate typing speed (characters per minute)
+      const timeElapsed = (now - startTime) / 1000 / 60; // minutes
+      const currentSpeed = keystrokeCount / timeElapsed;
+      setTypingSpeed(Math.round(currentSpeed));
+      
+      // Consider typing slow if less than 30 CPM
+      setIsTypingSlow(currentSpeed < 30 && keystrokeCount > 10);
+      
+      console.log('Typing speed:', currentSpeed, 'CPM, keystrokes:', keystrokeCount);
+    };
+    
+    const events = ['mousedown', 'mousemove', 'scroll', 'touchstart'];
     events.forEach(event => {
       document.addEventListener(event, updateActivity);
     });
+    
+    document.addEventListener('keypress', handleKeyPress);
 
     return () => {
       events.forEach(event => {
         document.removeEventListener(event, updateActivity);
       });
+      document.removeEventListener('keypress', handleKeyPress);
     };
   }, [isMomModeEnabled]);
 
@@ -122,32 +171,56 @@ const GlobalMomMode = () => {
     
     setLastPageChange(Date.now());
     console.log('Page changed to:', location.pathname);
+    
+    // Reset typing metrics on page change
+    setKeystrokes(0);
+    setTypingSpeed(0);
+    setIsTypingSlow(false);
   }, [location.pathname, isMomModeEnabled]);
 
-  // Mom's nagging logic
+  // Mom's nagging logic with dashboard-specific detection
   useEffect(() => {
     if (!isMomModeEnabled) return;
 
-    console.log('Setting up Mom nagging interval');
+    console.log('Setting up Mom nagging interval for path:', location.pathname);
 
     const checkForNagging = () => {
       const timeSinceActivity = Date.now() - lastActivityTime;
       const timeSincePageChange = Date.now() - lastPageChange;
+      const timeSinceTyping = Date.now() - lastTypingTime;
       
       console.log('Checking for nagging:', {
         timeSinceActivity,
         timeSincePageChange,
+        timeSinceTyping,
         currentPath: location.pathname,
-        showMomDialog
+        showMomDialog,
+        typingSpeed,
+        isTypingSlow
       });
       
-      // Different triggers based on page and behavior
       let shouldNag = false;
       let messageType: keyof typeof momMessages = 'procrastinating';
 
+      // Dashboard-specific nagging
+      if (location.pathname === '/dashboard') {
+        if (timeSinceActivity > 10000) { // 10 seconds idle on dashboard
+          shouldNag = true;
+          messageType = 'dashboardIdle';
+          console.log('Should nag: Dashboard idle timeout');
+        }
+      }
+
+      // Slow typing detection (when user is typing but slowly)
+      if (isTypingSlow && timeSinceTyping < 5000) {
+        shouldNag = true;
+        messageType = 'slowTyping';
+        console.log('Should nag: Slow typing detected');
+      }
+      
       // On feed page - nag more aggressively
-      if (location.pathname === '/feed' || location.pathname === '/dashboard') {
-        if (timeSinceActivity > 15000) { // 15 seconds of being on feed
+      if (location.pathname === '/feed') {
+        if (timeSinceActivity > 8000) { // 8 seconds of being on feed
           shouldNag = true;
           messageType = 'feedPageSpecific';
           console.log('Should nag: Feed page activity timeout');
@@ -155,14 +228,14 @@ const GlobalMomMode = () => {
       }
       
       // Page hopping behavior
-      if (timeSincePageChange < 5000 && timeSinceActivity > 10000) {
+      if (timeSincePageChange < 3000 && timeSinceActivity > 8000) {
         shouldNag = true;
         messageType = 'pageHopping';
         console.log('Should nag: Page hopping detected');
       }
       
       // General procrastination
-      if (timeSinceActivity > 30000) { // 30 seconds idle
+      if (timeSinceActivity > 20000) { // 20 seconds idle
         shouldNag = true;
         messageType = 'procrastinating';
         console.log('Should nag: General procrastination');
@@ -174,9 +247,9 @@ const GlobalMomMode = () => {
       }
     };
 
-    const interval = setInterval(checkForNagging, 5000); // Check every 5 seconds
+    const interval = setInterval(checkForNagging, 3000); // Check every 3 seconds
     return () => clearInterval(interval);
-  }, [isMomModeEnabled, lastActivityTime, lastPageChange, location.pathname, showMomDialog]);
+  }, [isMomModeEnabled, lastActivityTime, lastPageChange, lastTypingTime, location.pathname, showMomDialog, isTypingSlow]);
 
   const triggerMomNag = (type: keyof typeof momMessages) => {
     const messageData = momMessages[type];
@@ -213,6 +286,13 @@ const GlobalMomMode = () => {
     setUserReply('');
   };
 
+  const handleClose = () => {
+    console.log('Closing Mom Mode dialog');
+    setShowMomDialog(false);
+    setConversation([]);
+    // Don't unmount the component, just hide the dialog
+  };
+
   if (!showMomDialog) {
     return null;
   }
@@ -226,9 +306,16 @@ const GlobalMomMode = () => {
               <AnimatedMomAvatar mood={currentMood} size="md" />
               <div>
                 <h3 className="text-sm font-semibold text-gray-900">Mom Mode</h3>
-                <Badge variant="outline" className="text-xs border-purple-300 text-purple-600">
-                  Active
-                </Badge>
+                <div className="flex items-center space-x-1">
+                  <Badge variant="outline" className="text-xs border-purple-300 text-purple-600">
+                    Active
+                  </Badge>
+                  {typingSpeed > 0 && (
+                    <Badge variant="outline" className={`text-xs ${isTypingSlow ? 'border-red-300 text-red-600' : 'border-green-300 text-green-600'}`}>
+                      {typingSpeed} CPM
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex space-x-1">
@@ -241,7 +328,7 @@ const GlobalMomMode = () => {
                 <MessageCircle className="w-3 h-3" />
               </Button>
               <Button
-                onClick={() => setShowMomDialog(false)}
+                onClick={handleClose}
                 variant="ghost"
                 size="sm"
                 className="p-1 h-6 w-6"
