@@ -26,44 +26,6 @@ const GlobalMomMode = () => {
   const [isTypingSlow, setIsTypingSlow] = useState(false);
   const [keystrokes, setKeystrokes] = useState(0);
 
-  // Don't show Mom Mode if user is not authenticated
-  if (!user) {
-    console.log('GlobalMomMode: User not authenticated, not showing Mom Mode');
-    return null;
-  }
-
-  // Don't show Mom Mode on landing page or auth pages
-  const excludedPaths = ['/', '/login', '/signup', '/onboarding'];
-  if (excludedPaths.includes(location.pathname)) {
-    console.log('GlobalMomMode: On excluded path, not showing Mom Mode:', location.pathname);
-    return null;
-  }
-
-  // Check if Mom Mode is enabled
-  const isMomModeEnabled = settings?.enable_mom_mode === true;
-
-  console.log('GlobalMomMode render:', { 
-    isMomModeEnabled, 
-    settings,
-    loading,
-    user: !!user,
-    currentPath: location.pathname,
-    typingSpeed,
-    isTypingSlow
-  });
-
-  // Don't render if still loading settings
-  if (loading) {
-    console.log('GlobalMomMode: Still loading settings');
-    return null;
-  }
-
-  // Don't render if Mom Mode is not enabled
-  if (!isMomModeEnabled) {
-    console.log('GlobalMomMode: Mom Mode not enabled');
-    return null;
-  }
-
   const momMessages = {
     procrastinating: {
       messages: [
@@ -121,6 +83,19 @@ const GlobalMomMode = () => {
       mood: 'stern' as const
     }
   };
+
+  // Check if Mom Mode is enabled
+  const isMomModeEnabled = settings?.enable_mom_mode === true;
+
+  console.log('GlobalMomMode render:', { 
+    isMomModeEnabled, 
+    settings,
+    loading,
+    user: !!user,
+    currentPath: location.pathname,
+    typingSpeed,
+    isTypingSlow
+  });
 
   // Track user activity and typing
   useEffect(() => {
@@ -292,6 +267,32 @@ const GlobalMomMode = () => {
     setConversation([]);
     // Don't unmount the component, just hide the dialog
   };
+
+  // Now do all the early return checks AFTER all hooks have been called
+  // Don't show Mom Mode if user is not authenticated
+  if (!user) {
+    console.log('GlobalMomMode: User not authenticated, not showing Mom Mode');
+    return null;
+  }
+
+  // Don't show Mom Mode on landing page or auth pages
+  const excludedPaths = ['/', '/login', '/signup', '/onboarding'];
+  if (excludedPaths.includes(location.pathname)) {
+    console.log('GlobalMomMode: On excluded path, not showing Mom Mode:', location.pathname);
+    return null;
+  }
+
+  // Don't render if still loading settings
+  if (loading) {
+    console.log('GlobalMomMode: Still loading settings');
+    return null;
+  }
+
+  // Don't render if Mom Mode is not enabled
+  if (!isMomModeEnabled) {
+    console.log('GlobalMomMode: Mom Mode not enabled');
+    return null;
+  }
 
   if (!showMomDialog) {
     return null;
