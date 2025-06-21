@@ -9,6 +9,7 @@ import { useUserSettings } from '@/hooks/useUserSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocation } from 'react-router-dom';
 import AnimatedMomAvatar from '@/components/AnimatedMomAvatar';
+import { supabase } from '@/integrations/supabase/client';
 
 const GlobalMomMode = () => {
   const { user } = useAuth();
@@ -25,64 +26,7 @@ const GlobalMomMode = () => {
   const [typingSpeed, setTypingSpeed] = useState(0);
   const [isTypingSlow, setIsTypingSlow] = useState(false);
   const [keystrokes, setKeystrokes] = useState(0);
-
-  const momMessages = {
-    procrastinating: {
-      messages: [
-        "Hey! Stop scrolling and get back to studying!",
-        "I didn't raise you to waste time on social media!",
-        "Your future self will thank you for studying now instead of procrastinating!",
-        "Close that chat and open your books, young one!",
-        "You think success comes from chatting? GET TO WORK!",
-      ],
-      mood: 'nagging' as const
-    },
-    pageHopping: {
-      messages: [
-        "Stop jumping between pages and focus on one thing!",
-        "You're like a butterfly - land somewhere and STUDY!",
-        "Pick a page and stick with it, honey!",
-        "All this clicking around won't help your grades!",
-      ],
-      mood: 'stern' as const
-    },
-    slowTyping: {
-      messages: [
-        "Come on! Type faster! Your thoughts are moving slower than molasses!",
-        "Are you typing with your toes? Speed it up!",
-        "I've seen turtles type faster than you!",
-        "Focus! Your typing is as slow as your progress!",
-      ],
-      mood: 'nagging' as const
-    },
-    dashboardIdle: {
-      messages: [
-        "You're just staring at the dashboard! Do something productive!",
-        "The dashboard won't study for you - get moving!",
-        "Stop admiring your stats and start improving them!",
-        "Looking at your dashboard won't make your grades better!",
-      ],
-      mood: 'stern' as const
-    },
-    motivational: {
-      messages: [
-        "I know you can do better than this, sweetheart.",
-        "Remember why you started - now finish what you began!",
-        "Success is just one focused session away!",
-        "Your future career is waiting for you to get serious!",
-      ],
-      mood: 'encouraging' as const
-    },
-    feedPageSpecific: {
-      messages: [
-        "Why are you chatting when you should be studying?!",
-        "These posts won't help you pass your exams!",
-        "Stop gossiping and start focusing on your future!",
-        "Real talk: your grades matter more than this feed!",
-      ],
-      mood: 'stern' as const
-    }
-  };
+  const [isGeneratingResponse, setIsGeneratingResponse] = useState(false);
 
   // Check if Mom Mode is enabled
   const isMomModeEnabled = settings?.enable_mom_mode === true;
@@ -94,7 +38,8 @@ const GlobalMomMode = () => {
     user: !!user,
     currentPath: location.pathname,
     typingSpeed,
-    isTypingSlow
+    isTypingSlow,
+    showMomDialog
   });
 
   // Track user activity and typing
@@ -153,13 +98,42 @@ const GlobalMomMode = () => {
     setIsTypingSlow(false);
   }, [location.pathname, isMomModeEnabled]);
 
-  // Mom's nagging logic with dashboard-specific detection
+  // Generate AI response using Gemini
+  const generateMomResponse = async (context: string, userMessage?: string, mood: string = 'stern') => {
+    try {
+      setIsGeneratingResponse(true);
+      console.log('Generating AI response with context:', context);
+      
+      const { data, error } = await supabase.functions.invoke('mom-mode-chat', {
+        body: { context, userMessage, mood }
+      });
+
+      if (error) throw error;
+      
+      console.log('AI response:', data);
+      return data.message;
+    } catch (error) {
+      console.error('Error generating AI response:', error);
+      // Fallback to basic messages if AI fails
+      const fallbacks = [
+        "Hey! Focus up and get back to work!",
+        "I'm watching you - no more distractions!",
+        "Come on, you can do better than this!",
+        "Time to buckle down and study!"
+      ];
+      return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    } finally {
+      setIsGeneratingResponse(false);
+    }
+  };
+
+  // Mom's nagging logic with better detection
   useEffect(() => {
     if (!isMomModeEnabled) return;
 
     console.log('Setting up Mom nagging interval for path:', location.pathname);
 
-    const checkForNagging = () => {
+    const checkForNagging = async () => {
       const timeSinceActivity = Date.now() - lastActivityTime;
       const timeSincePageChange = Date.now() - lastPageChange;
       const timeSinceTyping = Date.now() - lastTypingTime;
@@ -175,87 +149,86 @@ const GlobalMomMode = () => {
       });
       
       let shouldNag = false;
-      let messageType: keyof typeof momMessages = 'procrastinating';
+      let context = '';
+      let mood: 'happy' | 'stern' | 'encouraging' | 'nagging' | 'proud' = 'stern';
 
-      // Dashboard-specific nagging
+      // Dashboard-specific nagging (more aggressive)
       if (location.pathname === '/dashboard') {
-        if (timeSinceActivity > 10000) { // 10 seconds idle on dashboard
+        if (timeSinceActivity > 8000) { // 8 seconds idle on dashboard
           shouldNag = true;
-          messageType = 'dashboardIdle';
+          context = 'User has been idle on the dashboard for 8+ seconds. They should pick a study activity instead of just staring at their stats.';
+          mood = 'nagging';
           console.log('Should nag: Dashboard idle timeout');
         }
       }
 
+      // Feed page - nag immediately 
+      if (location.pathname === '/feed') {
+        if (timeSinceActivity > 5000) { // 5 seconds on feed
+          shouldNag = true;
+          context = 'User is on the social feed instead of studying. They need to close this and get back to work.';
+          mood = 'stern';
+          console.log('Should nag: Feed page detected');
+        }
+      }
+
       // Slow typing detection (when user is typing but slowly)
-      if (isTypingSlow && timeSinceTyping < 5000) {
+      if (isTypingSlow && timeSinceTyping < 3000) {
         shouldNag = true;
-        messageType = 'slowTyping';
+        context = `User is typing very slowly at ${typingSpeed} characters per minute. They need to focus and type faster.`;
+        mood = 'nagging';
         console.log('Should nag: Slow typing detected');
       }
       
-      // On feed page - nag more aggressively
-      if (location.pathname === '/feed') {
-        if (timeSinceActivity > 8000) { // 8 seconds of being on feed
-          shouldNag = true;
-          messageType = 'feedPageSpecific';
-          console.log('Should nag: Feed page activity timeout');
-        }
-      }
-      
-      // Page hopping behavior
-      if (timeSincePageChange < 3000 && timeSinceActivity > 8000) {
+      // Page hopping behavior (jumping between pages quickly)
+      if (timeSincePageChange < 4000 && timeSinceActivity > 6000) {
         shouldNag = true;
-        messageType = 'pageHopping';
+        context = 'User is rapidly switching between pages without settling down to study. They need to pick one thing and focus.';
+        mood = 'stern';
         console.log('Should nag: Page hopping detected');
       }
       
-      // General procrastination
-      if (timeSinceActivity > 20000) { // 20 seconds idle
+      // General procrastination (longer idle time)
+      if (timeSinceActivity > 15000) { // 15 seconds idle
         shouldNag = true;
-        messageType = 'procrastinating';
+        context = `User has been completely idle for ${Math.round(timeSinceActivity/1000)} seconds. Time to get moving and be productive.`;
+        mood = 'encouraging';
         console.log('Should nag: General procrastination');
       }
 
-      if (shouldNag && !showMomDialog) {
-        console.log('Triggering Mom nag with type:', messageType);
-        triggerMomNag(messageType);
+      if (shouldNag && !showMomDialog && !isGeneratingResponse) {
+        console.log('Triggering Mom nag with context:', context);
+        await triggerMomNag(context, mood);
       }
     };
 
-    const interval = setInterval(checkForNagging, 3000); // Check every 3 seconds
+    const interval = setInterval(checkForNagging, 2000); // Check every 2 seconds for better responsiveness
     return () => clearInterval(interval);
-  }, [isMomModeEnabled, lastActivityTime, lastPageChange, lastTypingTime, location.pathname, showMomDialog, isTypingSlow]);
+  }, [isMomModeEnabled, lastActivityTime, lastPageChange, lastTypingTime, location.pathname, showMomDialog, isTypingSlow, isGeneratingResponse]);
 
-  const triggerMomNag = (type: keyof typeof momMessages) => {
-    const messageData = momMessages[type];
-    const message = messageData.messages[Math.floor(Math.random() * messageData.messages.length)];
-
-    console.log('Mom is nagging:', message);
-    setConversation([{ sender: 'mom', message, mood: messageData.mood }]);
-    setCurrentMood(messageData.mood);
+  const triggerMomNag = async (context: string, mood: 'happy' | 'stern' | 'encouraging' | 'nagging' | 'proud') => {
+    console.log('Mom is generating a response...');
+    const message = await generateMomResponse(context, undefined, mood);
+    
+    console.log('Mom says:', message);
+    setConversation([{ sender: 'mom', message, mood }]);
+    setCurrentMood(mood);
     setShowMomDialog(true);
     setIsMinimized(false);
   };
 
-  const handleUserReply = () => {
-    if (!userReply.trim()) return;
+  const handleUserReply = async () => {
+    if (!userReply.trim() || isGeneratingResponse) return;
 
     const newConversation = [...conversation, { sender: 'user' as const, message: userReply }];
     setConversation(newConversation);
 
-    // Mom's responses based on what user says
-    const momResponses = [
-      { message: "Nice try, but I'm still your mom and you still need to study!", mood: 'stern' },
-      { message: "Excuses, excuses! I've heard them all before.", mood: 'nagging' },
-      { message: "That's what your father would say too. Now get to work!", mood: 'stern' },
-      { message: "I love you, but loving you means pushing you to succeed!", mood: 'encouraging' },
-      { message: "You can sweet talk me all you want, but those grades won't improve themselves!", mood: 'nagging' },
-    ];
+    // Generate AI response to user's reply
+    const context = `User replied: "${userReply}". Respond as a mom who's trying to get them back to studying.`;
+    const response = await generateMomResponse(context, userReply, currentMood);
 
     setTimeout(() => {
-      const response = momResponses[Math.floor(Math.random() * momResponses.length)];
-      setConversation(prev => [...prev, { sender: 'mom', message: response.message, mood: response.mood }]);
-      setCurrentMood(response.mood as any);
+      setConversation(prev => [...prev, { sender: 'mom', message: response, mood: currentMood }]);
     }, 1000);
 
     setUserReply('');
@@ -265,30 +238,25 @@ const GlobalMomMode = () => {
     console.log('Closing Mom Mode dialog');
     setShowMomDialog(false);
     setConversation([]);
-    // Don't unmount the component, just hide the dialog
   };
 
-  // Now do all the early return checks AFTER all hooks have been called
-  // Don't show Mom Mode if user is not authenticated
+  // Early return checks AFTER all hooks
   if (!user) {
     console.log('GlobalMomMode: User not authenticated, not showing Mom Mode');
     return null;
   }
 
-  // Don't show Mom Mode on landing page or auth pages
   const excludedPaths = ['/', '/login', '/signup', '/onboarding'];
   if (excludedPaths.includes(location.pathname)) {
     console.log('GlobalMomMode: On excluded path, not showing Mom Mode:', location.pathname);
     return null;
   }
 
-  // Don't render if still loading settings
   if (loading) {
     console.log('GlobalMomMode: Still loading settings');
     return null;
   }
 
-  // Don't render if Mom Mode is not enabled
   if (!isMomModeEnabled) {
     console.log('GlobalMomMode: Mom Mode not enabled');
     return null;
@@ -306,10 +274,10 @@ const GlobalMomMode = () => {
             <div className="flex items-center space-x-2">
               <AnimatedMomAvatar mood={currentMood} size="md" />
               <div>
-                <h3 className="text-sm font-semibold text-gray-900">Mom Mode</h3>
+                <h3 className="text-sm font-semibold text-gray-900">AI Mom Mode</h3>
                 <div className="flex items-center space-x-1">
                   <Badge variant="outline" className="text-xs border-purple-300 text-purple-600">
-                    Active
+                    {isGeneratingResponse ? 'Thinking...' : 'Active'}
                   </Badge>
                   {typingSpeed > 0 && (
                     <Badge variant="outline" className={`text-xs ${isTypingSlow ? 'border-red-300 text-red-600' : 'border-green-300 text-green-600'}`}>
@@ -364,6 +332,17 @@ const GlobalMomMode = () => {
                     </div>
                   </div>
                 ))}
+                {isGeneratingResponse && (
+                  <div className="p-2 rounded-lg text-sm bg-pink-100 text-pink-800 border-l-4 border-pink-400 animate-pulse">
+                    <div className="flex items-center space-x-2">
+                      <AnimatedMomAvatar mood={currentMood} size="sm" />
+                      <div>
+                        <span className="font-medium">Mom: </span>
+                        <span className="italic">Thinking of what to say...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex space-x-2">
@@ -373,11 +352,13 @@ const GlobalMomMode = () => {
                   onChange={(e) => setUserReply(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleUserReply()}
                   className="text-sm border-pink-200 focus:border-pink-400"
+                  disabled={isGeneratingResponse}
                 />
                 <Button
                   onClick={handleUserReply}
                   size="sm"
                   className="bg-pink-500 hover:bg-pink-600 text-white"
+                  disabled={isGeneratingResponse}
                 >
                   <Send className="w-4 h-4" />
                 </Button>
