@@ -438,6 +438,7 @@ export type Database = {
         Row: {
           created_at: string
           email_notifications: boolean | null
+          enable_mom_mode: boolean | null
           id: string
           language: string | null
           notifications: boolean | null
@@ -450,6 +451,7 @@ export type Database = {
         Insert: {
           created_at?: string
           email_notifications?: boolean | null
+          enable_mom_mode?: boolean | null
           id?: string
           language?: string | null
           notifications?: boolean | null
@@ -462,6 +464,7 @@ export type Database = {
         Update: {
           created_at?: string
           email_notifications?: boolean | null
+          enable_mom_mode?: boolean | null
           id?: string
           language?: string | null
           notifications?: boolean | null

@@ -110,6 +110,11 @@ export const useUserSettings = () => {
       console.log('Updated settings:', data);
       setSettings(data as UserSettings);
       
+      toast({
+        title: "Success",
+        description: "Settings updated successfully"
+      });
+      
       return data;
     } catch (error) {
       console.error('Error in updateSettings:', error);
