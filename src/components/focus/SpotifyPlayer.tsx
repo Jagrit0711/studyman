@@ -4,9 +4,16 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { SkipForward, SkipBack, Search, Music, Settings, Shuffle, Repeat } from 'lucide-react';
+import { SkipForward, SkipBack, Search, Music, Settings, Shuffle, Repeat, Play, Pause } from 'lucide-react';
 import { useSpotify } from '@/hooks/useSpotify';
 import SimpleAudioPlayer from './SimpleAudioPlayer';
+
+// @ts-ignore
+declare global {
+  interface Window {
+    Spotify: any;
+  }
+}
 
 const SpotifyPlayer = () => {
   const { 
@@ -34,6 +41,7 @@ const SpotifyPlayer = () => {
   const playerRef = useRef<any>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [sdkReady, setSdkReady] = useState(false);
+  const [playerState, setPlayerState] = useState<any>(null);
 
   // Load Spotify Web Playback SDK
   useEffect(() => {
@@ -170,6 +178,32 @@ const SpotifyPlayer = () => {
     }
   };
 
+  const transferPlaybackHere = async () => {
+    if (!deviceId) return;
+    const token = localStorage.getItem('spotify_access_token');
+    await fetch('https://api.spotify.com/v1/me/player', {
+      method: 'PUT',
+      body: JSON.stringify({ device_ids: [deviceId], play: true }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  };
+
+  // Listen for player state changes
+  useEffect(() => {
+    if (!playerRef.current) return;
+    playerRef.current.addListener('player_state_changed', (state: any) => {
+      setPlayerState(state);
+    });
+  }, [sdkReady]);
+
+  // Auto transfer playback when deviceId is ready
+  useEffect(() => {
+    if (deviceId) transferPlaybackHere();
+  }, [deviceId]);
+
   if (!isAuthenticated) {
     return (
       <Card className="p-6 border-gray-200 shadow-sm animate-fade-in">
@@ -211,6 +245,42 @@ const SpotifyPlayer = () => {
     );
   }
 
+  // Render player controls for full track playback
+  const renderSdkPlayer = () => {
+    if (!playerState) return null;
+    const { track_window, paused, position, duration } = playerState;
+    const track = track_window.current_track;
+    return (
+      <div className="p-4 bg-white rounded-xl border border-green-200 shadow-sm animate-scale-in">
+        <div className="flex items-center space-x-4">
+          {track.album.images[0]?.url && (
+            <img src={track.album.images[0].url} alt="Album cover" className="w-16 h-16 rounded-lg object-cover shadow-md" />
+          )}
+          <div>
+            <p className="text-base font-semibold text-gray-900 truncate">{track.name}</p>
+            <p className="text-sm text-gray-600 truncate">{track.artists.map((a: any) => a.name).join(', ')}</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center space-x-2 mt-4">
+          <Button onClick={() => playerRef.current?.previousTrack()} size="sm"> <SkipBack className="w-5 h-5" /> </Button>
+          <Button onClick={() => playerRef.current?.togglePlay()} size="lg" className="bg-green-500 text-white"> {paused ? <Play className="w-8 h-8" /> : <Pause className="w-8 h-8" />} </Button>
+          <Button onClick={() => playerRef.current?.nextTrack()} size="sm"> <SkipForward className="w-5 h-5" /> </Button>
+        </div>
+        <div className="flex justify-between text-xs text-gray-500 font-mono mt-2">
+          <span>{formatTime(position / 1000)}</span>
+          <span>{formatTime(duration / 1000)}</span>
+        </div>
+      </div>
+    );
+  };
+
+  function formatTime(time: number) {
+    if (isNaN(time)) return '0:00';
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
   return (
     <Card className="p-6 border-gray-200 shadow-sm animate-fade-in">
       <div className="flex items-center justify-between mb-6">
@@ -245,14 +315,16 @@ const SpotifyPlayer = () => {
       </div>
       
       <div className="space-y-6">
-        {/* Simple Audio Player */}
-        <SimpleAudioPlayer
-          track={currentTrack}
-          isPlaying={isPlaying}
-          onTogglePlay={togglePlayback}
-          volume={volume}
-          onVolumeChange={setVolume}
-        />
+        {/* SDK Player for full tracks */}
+        {playerState ? renderSdkPlayer() : (
+          <div className="p-6 bg-orange-50 rounded-xl text-center border border-orange-200 animate-fade-in">
+            <div className="w-16 h-16 bg-orange-200 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Music className="w-8 h-8 text-orange-500" />
+            </div>
+            <p className="text-sm text-orange-700 font-medium">No track playing</p>
+            <p className="text-xs text-orange-600 mt-1">Select a song to start playback</p>
+          </div>
+        )}
         
         {/* Playback Controls */}
         <div className="flex items-center justify-center space-x-2">
