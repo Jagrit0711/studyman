@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+gitimport { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -214,6 +214,10 @@ const SpotifyPlayer = () => {
     if (deviceId) transferPlaybackHere();
   }, [deviceId]);
 
+  useEffect(() => {
+    console.log('[SpotifyPlayer] deviceId:', deviceId, 'sdkReady:', sdkReady, 'playerState:', playerState);
+  }, [deviceId, sdkReady, playerState]);
+
   if (!isAuthenticated) {
     return (
       <Card className="p-6 border-gray-200 shadow-sm animate-fade-in">
@@ -332,15 +336,26 @@ const SpotifyPlayer = () => {
       </div>
       <Button onClick={transferPlaybackHere} className="mb-4" variant="outline" size="sm">Force Play Here</Button>
       <div className="space-y-6">
-        {/* SDK Player for full tracks */}
-        {playerState ? renderSdkPlayer() : (
-          <div className="p-6 bg-orange-50 rounded-xl text-center border border-orange-200 animate-fade-in">
-            <div className="w-16 h-16 bg-orange-200 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Music className="w-8 h-8 text-orange-500" />
+        {/* Show SimpleAudioPlayer only if currentTrack has a preview_url */}
+        {currentTrack && currentTrack.preview_url ? (
+          <SimpleAudioPlayer
+            track={currentTrack}
+            isPlaying={isPlaying}
+            onTogglePlay={togglePlayback}
+            volume={volume}
+            onVolumeChange={setVolume}
+          />
+        ) : (
+          // SDK Player for full tracks
+          playerState ? renderSdkPlayer() : (
+            <div className="p-6 bg-orange-50 rounded-xl text-center border border-orange-200 animate-fade-in">
+              <div className="w-16 h-16 bg-orange-200 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Music className="w-8 h-8 text-orange-500" />
+              </div>
+              <p className="text-sm text-orange-700 font-medium">No track playing</p>
+              <p className="text-xs text-orange-600 mt-1">Select a song to start playback</p>
             </div>
-            <p className="text-sm text-orange-700 font-medium">No track playing</p>
-            <p className="text-xs text-orange-600 mt-1">Select a song to start playback</p>
-          </div>
+          )
         )}
         
         {/* Playback Controls */}
