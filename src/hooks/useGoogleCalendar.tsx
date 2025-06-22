@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { googleCalendarService } from '@/services/googleCalendar';
 import { useToast } from '@/hooks/use-toast';
 
@@ -20,11 +20,13 @@ interface GoogleCalendarEvent {
 export const useGoogleCalendar = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [events, setEvents] = useState<GoogleCalendarEvent[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     const initializeGoogleCalendar = async () => {
+      setIsInitializing(true);
       try {
         console.log('Initializing Google Calendar...');
         await googleCalendarService.initialize();
@@ -54,13 +56,15 @@ export const useGoogleCalendar = () => {
           description: "Failed to initialize Google Calendar service",
           variant: "destructive"
         });
+      } finally {
+        setIsInitializing(false);
       }
     };
 
     initializeGoogleCalendar();
   }, [toast]);
 
-  const connectGoogleCalendar = async () => {
+  const connectGoogleCalendar = useCallback(async () => {
     setIsLoading(true);
     try {
       console.log('Connecting to Google Calendar...');
@@ -88,9 +92,9 @@ export const useGoogleCalendar = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
-  const disconnectGoogleCalendar = () => {
+  const disconnectGoogleCalendar = useCallback(() => {
     try {
       googleCalendarService.signOut();
       setIsConnected(false);
@@ -107,9 +111,9 @@ export const useGoogleCalendar = () => {
         variant: "destructive"
       });
     }
-  };
+  }, [toast]);
 
-  const fetchEvents = async (startDate: Date, endDate: Date) => {
+  const fetchEvents = useCallback(async (startDate: Date, endDate: Date) => {
     if (!isConnected) {
       console.log('Not connected to Google Calendar, skipping fetch');
       return [];
@@ -140,9 +144,9 @@ export const useGoogleCalendar = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isConnected, toast]);
 
-  const createEvent = async (event: Omit<GoogleCalendarEvent, 'id'>) => {
+  const createEvent = useCallback(async (event: Omit<GoogleCalendarEvent, 'id'>) => {
     if (!isConnected) {
       throw new Error('Not connected to Google Calendar');
     }
@@ -160,7 +164,7 @@ export const useGoogleCalendar = () => {
       });
       return createdEvent;
     } catch (error) {
-      console.error('Failed to create Google Calendar event:', error);
+      console.error('Failed to create Google Calendar event. Full error:', JSON.stringify(error, null, 2));
       const errorMessage = error instanceof Error ? error.message : "Failed to create event in Google Calendar";
       toast({
         title: "Creation Error",
@@ -169,9 +173,49 @@ export const useGoogleCalendar = () => {
       });
       throw error;
     }
-  };
+  }, [isConnected, toast]);
 
-  const syncEventToGoogleCalendar = async (title: string, date: string, time: string, type: string) => {
+  const updateEvent = useCallback(async (eventId: string, event: Partial<GoogleCalendarEvent>) => {
+    if (!isConnected) {
+      throw new Error('Not connected to Google Calendar');
+    }
+    try {
+      const updatedEvent = await googleCalendarService.updateEvent(eventId, event);
+      setEvents(prev => prev.map(e => e.id === eventId ? { ...e, ...updatedEvent } : e));
+      toast({
+        title: "Success",
+        description: "Event updated in Google Calendar"
+      });
+      return updatedEvent;
+    } catch (error) {
+      toast({
+        title: "Update Error",
+        description: error instanceof Error ? error.message : "Failed to update event",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  }, [isConnected, toast]);
+
+  const getEvent = useCallback(async (eventId: string) => {
+    if (!isConnected) {
+      throw new Error('Not connected to Google Calendar');
+    }
+    try {
+      return await googleCalendarService.getEvent(eventId);
+    } catch (error) {
+       console.error(`Failed to get event ${eventId}:`, error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to get event details";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      throw error;
+    }
+  }, [isConnected, toast]);
+
+  const syncEventToGoogleCalendar = useCallback(async (title: string, date: string, time: string, type: string) => {
     if (!isConnected) {
       console.log('Not connected to Google Calendar, skipping sync');
       return null;
@@ -200,16 +244,19 @@ export const useGoogleCalendar = () => {
       console.error('Failed to sync event to Google Calendar:', error);
       throw error;
     }
-  };
+  }, [isConnected, createEvent]);
 
   return {
     isConnected,
     isLoading,
+    isInitializing,
     events,
     connectGoogleCalendar,
     disconnectGoogleCalendar,
     fetchEvents,
     createEvent,
+    updateEvent,
+    getEvent,
     syncEventToGoogleCalendar,
   };
 };

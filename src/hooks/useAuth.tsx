@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,62 +27,63 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
 
-        // Only handle redirection for SIGNED_IN event and prevent multiple redirects
-        if (event === 'SIGNED_IN' && session?.user && !hasRedirected) {
-          console.log('User signed in, checking onboarding status...');
-          setHasRedirected(true);
-          
-          // Small delay to prevent conflicts with other navigation
-          setTimeout(async () => {
-            try {
-              const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('onboarding_completed')
-                .eq('id', session.user.id)
-                .maybeSingle();
-              
-              console.log('Profile check result:', profile, error);
-              
-              // Only redirect if we're not already on the target page
-              const currentPath = window.location.pathname;
-              
-              if (error || !profile || !profile.onboarding_completed) {
-                if (currentPath !== '/onboarding') {
-                  console.log('User needs onboarding, redirecting');
+        if (event === 'INITIAL_SESSION' && !session) {
+          setLoading(false);
+          return;
+        }
+        
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (!session) {
+            setSession(null);
+            setUser(null);
+            setLoading(false);
+            return;
+          }
+
+          setSession(session);
+          setUser(session.user);
+          setLoading(false);
+
+          // Now, with a guaranteed fresh session, check onboarding status
+          if (session.user && !hasRedirected) {
+            setHasRedirected(true); // Prevent multiple redirects
+            setTimeout(async () => {
+              try {
+                const { data: profile, error } = await supabase
+                  .from('profiles')
+                  .select('onboarding_completed')
+                  .eq('id', session.user.id)
+                  .maybeSingle();
+                
+                const currentPath = window.location.pathname;
+
+                if (error || !profile || !profile.onboarding_completed) {
+                  if (currentPath !== '/onboarding') {
+                    window.location.href = '/onboarding';
+                  }
+                } else {
+                  if (currentPath !== '/dashboard' && !['/login', '/signup', '/'].includes(currentPath)) {
+                    // Stay on dashboard or landing if already there, otherwise redirect
+                  } else if (currentPath !== '/dashboard') {
+                     window.location.href = '/dashboard';
+                  }
+                }
+              } catch (error) {
+                if (window.location.pathname !== '/onboarding') {
                   window.location.href = '/onboarding';
                 }
-              } else {
-                if (currentPath !== '/dashboard') {
-                  console.log('User has completed onboarding, redirecting to dashboard');
-                  window.location.href = '/dashboard';
-                }
               }
-            } catch (error) {
-              console.log('Error checking profile:', error);
-              if (window.location.pathname !== '/onboarding') {
-                window.location.href = '/onboarding';
-              }
-            }
-          }, 100);
-        }
-
-        // Reset redirect flag when user signs out
-        if (event === 'SIGNED_OUT') {
+            }, 50);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
+          setLoading(false);
           setHasRedirected(false);
         }
       }
     );
-
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
 
     return () => subscription.unsubscribe();
   }, [hasRedirected]);

@@ -17,10 +17,10 @@ interface GoogleCalendarResponse {
 }
 
 class GoogleCalendarService {
-  private clientId = '240473196565-7fi2k9hvvts0466180fldca3rr9nikf3.apps.googleusercontent.com';
+  private clientId = '240473196565-0h29a65bthqmkkfqgillkoqqco3rvoae.apps.googleusercontent.com';
   private apiKey = 'AIzaSyA6Y5AVrUqTQw-VsV1h3SK25IMuITi9oXQ';
   private discoveryDoc = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
-  private scopes = 'https://www.googleapis.com/auth/calendar';
+  private scopes = 'https://www.googleapis.com/auth/calendar.events';
   
   private gapi: any = null;
   private google: any = null;
@@ -222,43 +222,75 @@ class GoogleCalendarService {
     }
   }
 
-  async createEvent(event: Omit<GoogleCalendarEvent, 'id'>): Promise<GoogleCalendarEvent> {
+  async createEvent(event: Omit<GoogleCalendarEvent, 'id'> & { conferenceData?: any }): Promise<GoogleCalendarEvent> {
     if (!this.isSignedIn()) {
       throw new Error('Not signed in to Google Calendar');
     }
 
     try {
       console.log('Creating Google Calendar event:', event);
+      const resource: any = { ...event };
       
       const request = await this.gapi.client.calendar.events.insert({
         calendarId: 'primary',
-        resource: event,
+        resource,
+        conferenceDataVersion: resource.conferenceData ? 1 : 0,
       });
 
-      console.log('Google Calendar event created:', request.result);
-      return request.result;
+      console.log('Google Calendar event created, re-fetching to get latest data:', request.result);
+      
+      const newEvent = await this.gapi.client.calendar.events.get({
+        calendarId: 'primary',
+        eventId: request.result.id,
+      });
+
+      return newEvent.result;
     } catch (error) {
       console.error('Error creating Google Calendar event:', error);
       throw new Error(`Failed to create event in Google Calendar: ${error.message}`);
     }
   }
 
-  async updateEvent(eventId: string, event: GoogleCalendarEvent): Promise<GoogleCalendarEvent> {
+  async getEvent(eventId: string): Promise<GoogleCalendarEvent> {
+    if (!this.isSignedIn()) {
+      throw new Error('Not signed in to Google Calendar');
+    }
+    try {
+      const request = await this.gapi.client.calendar.events.get({
+        calendarId: 'primary',
+        eventId: eventId,
+      });
+      return request.result;
+    } catch (error) {
+      console.error(`Error fetching event ${eventId}:`, error);
+      throw new Error(`Failed to fetch event from Google Calendar: ${error.message}`);
+    }
+  }
+
+  async updateEvent(eventId: string, event: Partial<GoogleCalendarEvent>): Promise<GoogleCalendarEvent> {
     if (!this.isSignedIn()) {
       throw new Error('Not signed in to Google Calendar');
     }
 
     try {
-      console.log('Updating Google Calendar event:', eventId);
+      console.log('Updating Google Calendar event:', eventId, event);
       
-      const request = await this.gapi.client.calendar.events.update({
+      const request = await this.gapi.client.calendar.events.patch({
         calendarId: 'primary',
         eventId: eventId,
         resource: event,
+        conferenceDataVersion: 1, // Required when updating conference data
       });
 
-      console.log('Google Calendar event updated:', request.result);
-      return request.result;
+      console.log('Google Calendar event updated, re-fetching to get latest data:', request.result);
+      
+      // Re-fetch the event to get the complete, updated object with the Meet link
+      const updatedEvent = await this.gapi.client.calendar.events.get({
+        calendarId: 'primary',
+        eventId: eventId,
+      });
+
+      return updatedEvent.result;
     } catch (error) {
       console.error('Error updating Google Calendar event:', error);
       throw new Error(`Failed to update event in Google Calendar: ${error.message}`);

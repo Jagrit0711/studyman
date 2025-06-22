@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,6 +19,7 @@ import NotFound from "./pages/NotFound";
 import OnboardingFlow from "./pages/OnboardingFlow";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
+import SessionReady from './pages/SessionReady';
 
 const queryClient = new QueryClient();
 
@@ -41,6 +41,7 @@ const App = () => (
               <Route path="/signup" element={<Signup />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/create-room" element={<CreateRoom />} />
+              <Route path="/session/:eventId" element={<SessionReady />} />
               <Route path="/onboarding" element={<OnboardingFlow />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms-conditions" element={<TermsConditions />} />

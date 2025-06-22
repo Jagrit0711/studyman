@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -107,4 +106,28 @@
   .notion-input {
     @apply bg-notion-gray-50 border-notion-gray-200 focus:border-notion-gray-400 focus:ring-0 rounded-md;
   }
+}
+
+/* Custom Calendar Styles */
+.notion-calendar .rdp-day {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.notion-calendar .has-event {
+  background-color: rgba(34, 197, 94, 0.1);
+  border: 2px solid rgb(34, 197, 94);
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.notion-calendar .has-event::after {
+  content: "●";
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 8px;
+  color: rgb(34, 197, 94);
 }

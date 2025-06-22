@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,7 +76,7 @@ export const usePosts = () => {
   });
 
   const createPostMutation = useMutation({
-    mutationFn: async (newPost: { title: string; content: string; subject: string }) => {
+    mutationFn: async (newPost: { title: string; content: string; subject: string; media_urls?: string[]; media_types?: string[] }) => {
       if (!user) throw new Error('Must be logged in');
       
       const { data, error } = await supabase

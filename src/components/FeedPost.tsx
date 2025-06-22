@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -76,6 +75,19 @@ const FeedPost = ({ post }: FeedPostProps) => {
         </div>
         
         {/* Content */}
+        {post.media_urls && post.media_urls.length > 0 && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            {post.media_urls.map((url, idx) => (
+              <img
+                key={idx}
+                src={url}
+                alt={`post-media-${idx}`}
+                className="w-32 h-32 object-cover rounded border border-gray-200 bg-gray-100"
+                style={{ maxWidth: '100%', maxHeight: '8rem' }}
+              />
+            ))}
+          </div>
+        )}
         <div className="mb-4">
           <h3 className="font-semibold text-gray-900 mb-2 text-lg">
             {post.title}

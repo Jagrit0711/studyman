@@ -100,7 +100,7 @@ const CalendarSection = () => {
       const startDate = new Date();
       startDate.setMonth(startDate.getMonth() - 1);
       const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + 2);
+      endDate.setMonth(startDate.getMonth() + 2);
 
       const googleEventsData = await fetchGoogleEvents(startDate, endDate);
       
@@ -315,7 +315,7 @@ const CalendarSection = () => {
                 className="text-sm"
               >
                 <Unlink className="w-4 h-4 mr-2" />
-                Disconnect Google
+                Disconnect
               </Button>
             ) : (
               <Button 
@@ -326,7 +326,7 @@ const CalendarSection = () => {
                 className="text-sm"
               >
                 <Link className="w-4 h-4 mr-2" />
-                {isGoogleCalendarLoading ? 'Connecting...' : 'Connect Google Calendar'}
+                {isGoogleCalendarLoading ? 'Connecting...' : 'Connect Google'}
               </Button>
             )}
           </div>
@@ -337,21 +337,12 @@ const CalendarSection = () => {
               mode="single"
               selected={selectedDate}
               onSelect={setSelectedDate}
-              className="w-full"
+              className="w-full rounded-md border p-3 bg-white shadow-sm notion-calendar"
               modifiers={{
-                hasEvents: getDatesWithEvents()
-              }}
-              modifiersStyles={{
-                hasEvents: { 
-                  backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                  border: '2px solid rgb(34, 197, 94)',
-                  borderRadius: '6px',
-                  fontWeight: '600',
-                  position: 'relative'
-                }
+                hasEvent: getDatesWithEvents()
               }}
               modifiersClassNames={{
-                hasEvents: 'relative after:content-["●"] after:absolute after:bottom-0 after:right-1 after:text-green-600 after:text-xs'
+                hasEvent: 'has-event',
               }}
             />
           </div>

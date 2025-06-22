@@ -1,234 +1,250 @@
-
 import { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Video, Users, BookOpen, Clock, Star, Sparkles, Zap, Heart } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Header';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Lock, Globe, Users, Search, X, Video } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+import { motion } from 'framer-motion';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+interface Subject {
+  id: string;
+  name: string;
+}
 
 const StudyRooms = () => {
-  const [animationPhase, setAnimationPhase] = useState(0);
+  const [rooms, setRooms] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [allSubjects, setAllSubjects] = useState<Subject[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState('');
+  
+  const [passwordPrompt, setPasswordPrompt] = useState<any>(null);
+  const [password, setPassword] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setAnimationPhase(prev => (prev + 1) % 4);
-    }, 2000);
-
-    return () => clearInterval(interval);
+    const fetchSubjects = async () => {
+      const { data, error } = await supabase.from('subjects').select('id, name').order('name');
+      if (error) {
+        console.error('Error fetching subjects:', error);
+      } else {
+        setAllSubjects(data || []);
+      }
+    };
+    fetchSubjects();
   }, []);
 
-  const features = [
-    {
-      icon: Video,
-      title: "Live Study Sessions",
-      description: "Join real-time video study rooms with students worldwide",
-      color: "text-blue-600",
-      bgColor: "bg-blue-100"
-    },
-    {
-      icon: Users,
-      title: "Study Groups",
-      description: "Create and join subject-specific study groups",
-      color: "text-green-600",
-      bgColor: "bg-green-100"
-    },
-    {
-      icon: BookOpen,
-      title: "Shared Resources",
-      description: "Access and share study materials in real-time",
-      color: "text-purple-600",
-      bgColor: "bg-purple-100"
-    },
-    {
-      icon: Clock,
-      title: "Scheduled Sessions",
-      description: "Plan and schedule study sessions with your peers",
-      color: "text-orange-600",
-      bgColor: "bg-orange-100"
-    }
-  ];
+  useEffect(() => {
+    const fetchRooms = async () => {
+      setLoading(true);
+      let query = supabase.from('study_rooms').select(`
+        *,
+        profiles (username),
+        subjects (name),
+        tags (name)
+      `);
 
-  const floatingIcons = [
-    { icon: Star, delay: 0, color: "text-yellow-500" },
-    { icon: Sparkles, delay: 500, color: "text-purple-500" },
-    { icon: Zap, delay: 1000, color: "text-blue-500" },
-    { icon: Heart, delay: 1500, color: "text-red-500" }
-  ];
+      if (searchTerm) {
+        query = query.ilike('name', `%${searchTerm}%`);
+      }
+      if (selectedSubject) {
+        query = query.eq('subject_id', selectedSubject);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching rooms:', error);
+        toast({ title: 'Error', description: 'Failed to load study rooms.', variant: 'destructive' });
+      } else {
+        setRooms(data || []);
+      }
+      setLoading(false);
+    };
+
+    const debounceFetch = setTimeout(() => {
+        fetchRooms();
+    }, 300); // Debounce search input
+
+    return () => clearTimeout(debounceFetch);
+  }, [searchTerm, selectedSubject, toast]);
+
+  const handleJoinRoom = (room: any) => {
+    if (room.is_private) {
+      setPasswordPrompt(room);
+    } else {
+      window.open(room.meet_link, '_blank');
+    }
+  };
+
+  const handlePasswordSubmit = async () => {
+      if (!password) {
+          toast({ title: "Error", description: "Password is required.", variant: 'destructive' });
+          return;
+      }
+      setIsVerifying(true);
+
+      try {
+        const session = await supabase.auth.getSession();
+        const token = session?.data?.session?.access_token;
+
+        if (!token) {
+            throw new Error("Authentication error: Could not get user token.");
+        }
+
+        const { data, error } = await supabase.functions.invoke('verify-room-password', {
+            headers: {
+                Authorization: `Bearer ${token}`
+            },
+            body: { roomId: passwordPrompt.id, passwordAttempt: password },
+        });
+
+        if (error) throw error;
+
+        if (data.error) {
+             toast({ title: "Incorrect Password", description: "Please try again.", variant: 'destructive' });
+        } else {
+            toast({ title: "Success!", description: "Joining room..."});
+            setTimeout(() => {
+                window.open(data.meet_link, '_blank');
+                setPasswordPrompt(null);
+                setPassword('');
+            }, 500);
+        }
+      } catch (error) {
+          toast({ title: "Verification Error", description: `An error occurred: ${error.message}`, variant: 'destructive' });
+      }
+
+      setIsVerifying(false);
+  };
+  
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+    <div className="min-h-screen bg-gray-50">
       <Header />
-      
-      <div className="container mx-auto px-4 py-12">
-        {/* Hero Section with Animation */}
-        <div className="text-center mb-16 relative">
-          {/* Floating Icons */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {floatingIcons.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={index}
-                  className={`absolute ${item.color} animate-bounce`}
-                  style={{
-                    left: `${20 + index * 20}%`,
-                    top: `${10 + (index % 2) * 30}%`,
-                    animationDelay: `${item.delay}ms`,
-                    animationDuration: '3s'
-                  }}
-                >
-                  <Icon className="w-8 h-8 opacity-30" />
+      <div className="container mx-auto px-4 py-8">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+            <Card className="mb-8 p-6 bg-white shadow-sm rounded-lg">
+            <h1 className="text-4xl font-bold text-gray-800 mb-2">Study Rooms</h1>
+            <p className="text-gray-600 mb-6">Find and join study sessions hosted by the community.</p>
+            <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-grow">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                    placeholder="Search by room name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-full"
+                />
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Main Animation */}
-          <div className="relative z-10">
-            <div className={`mb-8 transition-all duration-1000 ${
-              animationPhase === 0 ? 'scale-100 opacity-100' : 
-              animationPhase === 1 ? 'scale-110 opacity-90' :
-              animationPhase === 2 ? 'scale-105 opacity-95' : 'scale-100 opacity-100'
-            }`}>
-              <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-gray-900 to-gray-700 rounded-full flex items-center justify-center shadow-2xl">
-                <Video className={`w-16 h-16 text-white transition-all duration-500 ${
-                  animationPhase % 2 === 0 ? 'scale-100' : 'scale-110'
-                }`} />
-              </div>
+                <Select value={selectedSubject} onValueChange={(value) => setSelectedSubject(value || '')}>
+                  <SelectTrigger className="sm:w-[180px]">
+                    <SelectValue placeholder="Filter by subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allSubjects.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button onClick={() => { setSearchTerm(''); setSelectedSubject('') }} variant="ghost">
+                <X className="w-4 h-4 mr-2" />
+                Clear Filters
+                </Button>
             </div>
-
-            <h1 className={`text-6xl font-bold mb-6 bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900 bg-clip-text text-transparent transition-all duration-1000 ${
-              animationPhase === 1 ? 'scale-105' : 'scale-100'
-            }`}>
-              Study Rooms
-            </h1>
-            
-            <div className="relative">
-              <p className={`text-xl text-gray-600 mb-8 transition-all duration-1000 ${
-                animationPhase === 2 ? 'text-gray-800 scale-105' : 'text-gray-600 scale-100'
-              }`}>
-                Revolutionary collaborative study experience
-              </p>
-              
-              {/* Animated Coming Soon Badge */}
-              <div className={`inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-gray-900 to-gray-700 text-white rounded-full shadow-lg transition-all duration-1000 ${
-                animationPhase === 3 ? 'scale-110 shadow-2xl' : 'scale-100 shadow-lg'
-              }`}>
-                <Sparkles className={`w-5 h-5 transition-all duration-500 ${
-                  animationPhase % 2 === 0 ? 'rotate-0' : 'rotate-180'
-                }`} />
-                <span className="text-lg font-semibold">Coming Very Soon</span>
-                <Sparkles className={`w-5 h-5 transition-all duration-500 ${
-                  animationPhase % 2 === 0 ? 'rotate-0' : '-rotate-180'
-                }`} />
-              </div>
+            <div className="mt-4 flex flex-wrap gap-2 min-h-[24px]">
+                {/* Tag filtering can be re-implemented here if needed */}
             </div>
-          </div>
-        </div>
+            </Card>
+        </motion.div>
 
-        {/* Features Grid */}
-        <div className="max-w-4xl mx-auto mb-16">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">What's Coming</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <Card 
-                  key={index}
-                  className={`p-8 border-gray-200 hover:shadow-xl transition-all duration-500 hover:scale-105 ${
-                    animationPhase === index % 4 ? 'shadow-lg scale-105' : 'shadow-md scale-100'
-                  }`}
-                >
-                  <div className={`w-16 h-16 ${feature.bgColor} rounded-full flex items-center justify-center mb-6 mx-auto`}>
-                    <Icon className={`w-8 h-8 ${feature.color}`} />
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-52 w-full rounded-lg" />)}
+          </div>
+        ) : (
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            variants={{
+                hidden: { opacity: 0 },
+                show: {
+                    opacity: 1,
+                    transition: {
+                        staggerChildren: 0.1
+                    }
+                }
+            }}
+            initial="hidden"
+            animate="show"
+          >
+            {rooms.map((room) => (
+              <motion.div key={room.id} variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
+              <Card className="flex flex-col justify-between hover:shadow-lg transition-shadow h-full rounded-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="truncate font-bold text-xl">{room.name}</span>
+                    {room.is_private ? <Lock className="w-5 h-5 text-gray-400" /> : <Globe className="w-5 h-5 text-green-600" />}
+                  </CardTitle>
+                   <div className="text-sm text-gray-500 pt-1">
+                    Hosted by <span className="font-medium text-gray-700">{room.profiles?.username || 'Anonymous'}</span>
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4 text-center">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-600 text-center leading-relaxed">
-                    {feature.description}
-                  </p>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Progress Indicator */}
-        <div className="max-w-md mx-auto mb-16">
-          <Card className="p-8 border-gray-200 bg-gradient-to-r from-gray-50 to-white">
-            <h3 className="text-xl font-semibold text-gray-900 mb-6 text-center">Development Progress</h3>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Design & Planning</span>
-                <span className="text-sm font-medium text-green-600">100%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-green-500 h-2 rounded-full w-full transition-all duration-1000"></div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Backend Development</span>
-                <span className="text-sm font-medium text-blue-600">75%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className={`bg-blue-500 h-2 rounded-full transition-all duration-1000 ${
-                  animationPhase % 2 === 0 ? 'w-3/4' : 'w-4/5'
-                }`}></div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Frontend Development</span>
-                <span className="text-sm font-medium text-purple-600">60%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className={`bg-purple-500 h-2 rounded-full transition-all duration-1000 ${
-                  animationPhase === 1 ? 'w-3/5' : animationPhase === 3 ? 'w-2/3' : 'w-3/5'
-                }`}></div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Testing & QA</span>
-                <span className="text-sm font-medium text-orange-600">25%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className={`bg-orange-500 h-2 rounded-full transition-all duration-2000 ${
-                  animationPhase === 2 ? 'w-1/4' : 'w-1/5'
-                }`}></div>
-              </div>
+                  <div className="pt-2">
+                    <Badge variant="secondary">{room.subjects?.name || 'General'}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex flex-col flex-grow">
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-grow">{room.description || 'No description provided.'}</p>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {room.tags?.map((tag: any) => <Badge key={tag.name} variant="outline">{tag.name}</Badge>)}
+                  </div>
+                  <Button onClick={() => handleJoinRoom(room)} className="w-full mt-auto">
+                    <Video className="w-4 h-4 mr-2" />
+                    Join Session
+                  </Button>
+                </CardContent>
+              </Card>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+         {rooms.length === 0 && !loading && (
+            <div className="text-center py-16">
+                <p className="text-gray-500">No study rooms found. Try clearing your filters or create one!</p>
             </div>
-          </Card>
-        </div>
-
-        {/* CTA Section */}
-        <div className="text-center">
-          <Card className="max-w-2xl mx-auto p-12 border-gray-200 bg-gradient-to-br from-gray-900 to-gray-700 text-white">
-            <h3 className="text-3xl font-bold mb-6">Be the First to Know</h3>
-            <p className="text-gray-300 mb-8 text-lg">
-              Join our waitlist and get early access to Study Rooms when we launch
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button 
-                size="lg" 
-                className={`bg-white text-gray-900 hover:bg-gray-100 px-8 py-3 transition-all duration-300 ${
-                  animationPhase === 0 ? 'scale-105 shadow-lg' : 'scale-100'
-                }`}
-              >
-                Join Waitlist
-              </Button>
-              <Button 
-                variant="outline" 
-                size="lg" 
-                className="border-white text-white hover:bg-white hover:text-gray-900 px-8 py-3"
-              >
-                Learn More
-              </Button>
-            </div>
-          </Card>
-        </div>
+        )}
       </div>
+
+      <Dialog open={!!passwordPrompt} onOpenChange={() => setPasswordPrompt(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter Password for "{passwordPrompt?.name}"</DialogTitle>
+            <DialogDescription>This is a private room. Please enter the password to join.</DialogDescription>
+          </DialogHeader>
+          <Input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handlePasswordSubmit()}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPasswordPrompt(null)}>Cancel</Button>
+            <Button onClick={handlePasswordSubmit} disabled={isVerifying}>
+                {isVerifying ? 'Verifying...' : 'Join'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
