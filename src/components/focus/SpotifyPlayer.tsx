@@ -42,6 +42,7 @@ const SpotifyPlayer = () => {
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [sdkReady, setSdkReady] = useState(false);
   const [playerState, setPlayerState] = useState<any>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Load Spotify Web Playback SDK
   useEffect(() => {
@@ -178,17 +179,26 @@ const SpotifyPlayer = () => {
     }
   };
 
+  // Transfer playback to this device (with error handling)
   const transferPlaybackHere = async () => {
-    if (!deviceId) return;
+    if (!deviceId) {
+      setErrorMsg('Web Player device not ready.');
+      return;
+    }
     const token = localStorage.getItem('spotify_access_token');
-    await fetch('https://api.spotify.com/v1/me/player', {
-      method: 'PUT',
-      body: JSON.stringify({ device_ids: [deviceId], play: true }),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+    try {
+      await fetch('https://api.spotify.com/v1/me/player', {
+        method: 'PUT',
+        body: JSON.stringify({ device_ids: [deviceId], play: true }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      setErrorMsg(null);
+    } catch (err) {
+      setErrorMsg('Failed to transfer playback.');
+    }
   };
 
   // Listen for player state changes
@@ -313,7 +323,14 @@ const SpotifyPlayer = () => {
           </Dialog>
         </div>
       </div>
-      
+      {/* Debug Output */}
+      <div className="mb-2 text-xs text-gray-500">
+        <div>Device ID: {deviceId || 'Not ready'}</div>
+        <div>SDK Ready: {sdkReady ? 'Yes' : 'No'}</div>
+        <div>Player State: {playerState ? 'Active' : 'Idle'}</div>
+        {errorMsg && <div className="text-red-600">{errorMsg}</div>}
+      </div>
+      <Button onClick={transferPlaybackHere} className="mb-4" variant="outline" size="sm">Force Play Here</Button>
       <div className="space-y-6">
         {/* SDK Player for full tracks */}
         {playerState ? renderSdkPlayer() : (
