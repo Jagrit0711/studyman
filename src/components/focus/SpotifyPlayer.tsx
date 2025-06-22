@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -31,6 +31,68 @@ const SpotifyPlayer = () => {
   const [isShuffled, setIsShuffled] = useState(false);
   const [isRepeating, setIsRepeating] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const playerRef = useRef<any>(null);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [sdkReady, setSdkReady] = useState(false);
+
+  // Load Spotify Web Playback SDK
+  useEffect(() => {
+    if (!isAuthenticated || window.Spotify) return;
+    const script = document.createElement('script');
+    script.src = 'https://sdk.scdn.co/spotify-player.js';
+    script.async = true;
+    script.onload = () => setSdkReady(true);
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, [isAuthenticated]);
+
+  // Initialize player when SDK is ready
+  useEffect(() => {
+    if (!isAuthenticated || !sdkReady || playerRef.current || !window.Spotify) return;
+    const token = localStorage.getItem('spotify_access_token');
+    if (!token) return;
+    const player = new window.Spotify.Player({
+      name: 'StudyHive Web Player',
+      getOAuthToken: cb => { cb(token); },
+      volume: volume / 100,
+    });
+    playerRef.current = player;
+    player.addListener('ready', ({ device_id }) => {
+      setDeviceId(device_id);
+      console.log('Spotify Player ready with device ID', device_id);
+    });
+    player.addListener('not_ready', ({ device_id }) => {
+      console.log('Device ID has gone offline', device_id);
+    });
+    player.addListener('initialization_error', e => console.error(e));
+    player.addListener('authentication_error', e => console.error(e));
+    player.addListener('account_error', e => console.error(e));
+    player.connect();
+    return () => {
+      player.disconnect();
+    };
+  }, [isAuthenticated, sdkReady, volume]);
+
+  // Play full track using Web Playback SDK
+  const playFullTrack = async (track: any) => {
+    if (!deviceId) {
+      alert('Spotify Player not ready. Try again in a moment.');
+      return;
+    }
+    const token = localStorage.getItem('spotify_access_token');
+    if (!token) return;
+    await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ uris: [track.uri] }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    playTrack(track);
+  };
 
   const handleSearch = async () => {
     if (searchQuery.trim()) {
@@ -38,11 +100,9 @@ const SpotifyPlayer = () => {
       try {
         const results = await searchTracks(searchQuery);
         console.log('Search results:', results);
-        
-        // Prioritize tracks with preview URLs
+        // Only show tracks with preview URLs
         const tracksWithPreview = results.filter(track => track.preview_url);
-        const tracksWithoutPreview = results.filter(track => !track.preview_url);
-        setSearchResults([...tracksWithPreview, ...tracksWithoutPreview]);
+        setSearchResults(tracksWithPreview);
       } catch (error) {
         console.error('Search failed:', error);
       } finally {
@@ -52,8 +112,8 @@ const SpotifyPlayer = () => {
   };
 
   const handleTrackSelect = (track: any) => {
-    console.log('Selecting track:', track.name, 'Preview URL:', track.preview_url);
-    playTrack(track);
+    console.log('Selecting track:', track.name, 'URI:', track.uri);
+    playFullTrack(track);
     setCurrentPlaylist([track]);
     setCurrentTrackIndex(0);
     setShowSearch(false);
